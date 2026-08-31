@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "Premium Download Manager Integration",
+  "version": "1.0.0",
+  "description": "يحوّل التحميلات من المتصفح إلى Premium Download Manager",
+  "permissions": ["downloads", "nativeMessaging"],
+  "background": { "service_worker": "background.js" },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuMvSzFuT1li56IZYpH9UQZe+lgJGVR7jkDqaiTbQQ18OeN/Ah5wQ/bje/ROGxpKkLfP25Y2B3Bn4oeXq5+ZKVMUlhmrJ5OsCC61REx3y1c+mP/uoEKN+Jc1N/5D44G8Hi59405b5oOCSsoJPJ4wkPaxP/F6xOQ4b65IK/YBBBN/lHi/hkxV1J1sHC3SU5qpq3jaXkN2FCZEJgHV9gjvZg0E0Vi9l4eb8m9oWs5+SXhGW1KJOTQYLhvlQG5PIm8RdCEXyKSG9rMrV172k4anoSfiaDdBsZcV49vOK0Q4+lGf+yrrbkfk6aJHeCjALho3Hz+BQDIRzFMRk4XgopyKG3wIDAQAB"
+}

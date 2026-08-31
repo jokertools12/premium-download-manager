@@ -1,0 +1,207 @@
+'use strict';
+
+/* الترجمة: عربي / English / Türkçe
+   جدول موحّد يضمن تساوي المفاتيح بين اللغات الثلاث:
+   STR[key] = [ar, en, tr] */
+
+const STR = {
+  'app.name': ['Premium DM', 'Premium DM', 'Premium DM'],
+  'toolbar.add': ['＋ رابط جديد', '＋ New URL', '＋ Yeni bağlantı'],
+  'toolbar.video': ['🎬 فيديو', '🎬 Video', '🎬 Video'],
+  'toolbar.torrent': ['🧲 تورنت', '🧲 Torrent', '🧲 Torrent'],
+  'toolbar.resumeAll': ['▶ الكل', '▶ All', '▶ Tümü'],
+  'toolbar.pauseAll': ['⏸ الكل', '⏸ All', '⏸ Tümü'],
+  'toolbar.clear': ['🧹', '🧹', '🧹'],
+  'toolbar.import': ['📄', '📄', '📄'],
+  'toolbar.float': ['📌', '📌', '📌'],
+  'toolbar.searchPh': ['🔍 ابحث في التحميلات...', '🔍 Search downloads...', '🔍 İndirmelerde ara...'],
+  'toolbar.resumeAllTitle': ['استئناف الكل', 'Resume all', 'Tümünü sürdür'],
+  'toolbar.pauseAllTitle': ['إيقاف الكل', 'Pause all', 'Tümünü duraklat'],
+  'toolbar.clearTitle': ['مسح المكتملة والفاشلة', 'Clear completed & failed', 'Tamamlananları temizle'],
+  'toolbar.importTitle': ['استيراد جماعي من قائمة روابط', 'Bulk import URL list', 'Toplu içe aktarma'],
+  'toolbar.floatTitle': ['النافذة العائمة المصغرة', 'Mini floating window', 'Mini yüzen pencere'],
+  'toolbar.videoTitle': ['تحميل فيديو من يوتيوب وتويتر وآلاف المواقع + M3U8', 'Download video from YouTube, Twitter & 1000s of sites + M3U8', 'YouTube, Twitter ve binlerce site + M3U8'],
+  'toolbar.torrentTitle': ['تحميل ماغنت / تورنت (اختر الملفات)', 'Download magnet / torrent (choose files)', 'Magnet / torrent indir (dosya seçimi)'],
+  'side.dashboard': ['الإحصائيات', 'Statistics', 'İstatistikler'],
+  'side.rules': ['القواعد التلقائية', 'Auto Rules', 'Otomatik kurallar'],
+  'side.cats': ['التصنيفات', 'Categories', 'Kategoriler'],
+  'side.settings': ['⚙️ الإعدادات', '⚙️ Settings', '⚙️ Ayarlar'],
+  'filter.all': ['كل التحميلات', 'All downloads', 'Tüm indirmeler'],
+  'filter.downloading': ['قيد التحميل', 'Downloading', 'İndiriliyor'],
+  'filter.queued': ['في الانتظار', 'Queued', 'Sırada'],
+  'filter.paused': ['متوقف', 'Paused', 'Duraklatıldı'],
+  'filter.completed': ['مكتملة', 'Completed', 'Tamamlandı'],
+  'filter.failed': ['فاشلة', 'Failed', 'Başarısız'],
+  'cat.video': ['فيديو', 'Video', 'Video'],
+  'cat.audio': ['صوت', 'Music', 'Müzik'],
+  'cat.image': ['صور', 'Pictures', 'Resimler'],
+  'cat.document': ['مستندات', 'Documents', 'Belgeler'],
+  'cat.compressed': ['مضغوط', 'Archives', 'Arşivler'],
+  'cat.program': ['برامج', 'Programs', 'Programlar'],
+  'cat.other': ['أخرى', 'Other', 'Diğer'],
+  'status.queued': ['في الانتظار', 'Queued', 'Sırada'],
+  'status.downloading': ['جاري التحميل', 'Downloading', 'İndiriliyor'],
+  'status.paused': ['متوقف', 'Paused', 'Duraklatıldı'],
+  'status.completed': ['مكتمل', 'Completed', 'Tamamlandı'],
+  'status.failed': ['فشل', 'Failed', 'Başarısız'],
+  'status.canceled': ['ملغي', 'Canceled', 'İptal edildi'],
+  'empty.title': ['لا توجد تحميلات هنا', 'No downloads here', 'Burada indirme yok'],
+  'empty.sub': ['أضف رابطاً جديداً أو انسخ رابطاً إلى الحافظة، أو اسحب رابطاً وأفلته هنا', 'Add a new URL, copy a link to clipboard, or drag & drop a link here', 'Yeni bağlantı ekleyin, panoya kopyalayın veya bir bağlantıyı sürükleyip bırakın'],
+  'add.title': ['تحميل جديد', 'New Download', 'Yeni İndirme'],
+  'add.url': ['الرابط', 'URL', 'Bağlantı'],
+  'add.urlPh': ['https://example.com/file.zip', 'https://example.com/file.zip', 'https://ornek.com/dosya.zip'],
+  'add.name': ['اسم الملف (اختياري)', 'Filename (optional)', 'Dosya adı (isteğe bağlı)'],
+  'add.namePh': ['يُحدد تلقائياً من الرابط', 'Auto-detected from URL', 'Otomatik algılanır'],
+  'add.mirrors': ['روابط بديلة Mirrors (اختياري) — عند فشل الأول ينتقل تلقائياً للبديل', 'Mirror URLs (optional) — auto failover if primary fails', 'Yedek bağlantılar (isteğe bağlı) — otomatik geçiş'],
+  'add.folder': ['مجلد الحفظ', 'Save folder', 'Kayıt klasörü'],
+  'add.browse': ['تصفح…', 'Browse…', 'Gözat…'],
+  'add.cancel': ['إلغاء', 'Cancel', 'İptal'],
+  'add.start': ['بدء التحميل', 'Start Download', 'İndirmeyi başlat'],
+  'add.existed': ['هذا الرابط قيد التحميل بالفعل', 'This URL is already downloading', 'Bu bağlantı zaten indiriliyor'],
+  'add.added': ['تمت إضافة التحميل', 'Download added', 'İndirme eklendi'],
+  'add.badUrl': ['الرجاء إدخال رابط صحيح يبدأ بـ http', 'Enter a valid URL starting with http', 'http ile başlayan geçerli bir bağlantı girin'],
+  'dash.title.speed': ['📈 سرعة التحميل — آخر 60 ثانية', '📈 Download speed — last 60s', '📈 İndirme hızı — son 60sn'],
+  'dash.title.cats': ['🗂️ التوزيع حسب التصنيف', '🗂️ Distribution by category', '🗂️ Kategori dağılımı'],
+  'dash.today': ['حجم اليوم', 'Today', 'Bugün'],
+  'dash.week': ['هذا الأسبوع', 'This week', 'Bu hafta'],
+  'dash.total': ['الإجمالي', 'Total', 'Toplam'],
+  'dash.speedNow': ['السرعة الآن', 'Speed now', 'Anlık hız'],
+  'dash.active': ['نشط', 'active', 'aktif'],
+  'dash.noData': ['لا توجد بيانات بعد — ابدأ تحميلاً لتتراكم الإحصائيات', 'No data yet — start a download to collect statistics', 'Veri yok — istatistikler için indirme başlatın'],
+  'dash.waitingChart': ['في انتظار بيانات السرعة...', 'Waiting for speed data...', 'Hız verisi bekleniyor...'],
+  'files.count': ['{n} ملف', '{n} files', '{n} dosya'],
+  'rules.title': ['📐 القواعد التلقائية', '📐 Auto Rules', '📐 Otomatik kurallar'],
+  'rules.hint': ['عندما يحتوي الرابط على الكلمة المفتاحية، يُحفظ الملف في المجلد المحدد تلقائياً. القواعد لها أولوية أعلى من التصنيف التلقائي (ما لم تحدد مجلداً يدوياً).', 'When a URL contains the keyword, the file is saved to the mapped folder automatically. Rules take priority over auto-categorization (unless you set a folder manually).', 'Bağlantı anahtar kelimeyi içerirse dosya otomatik olarak eşlenen klasöre kaydedilir.'],
+  'rules.new': ['＋ قاعدة جديدة', '＋ New rule', '＋ Yeni kural'],
+  'rules.save': ['حفظ القواعد', 'Save rules', 'Kuralları kaydet'],
+  'rules.close': ['إغلاق', 'Close', 'Kapat'],
+  'rules.saved': ['تم حفظ {n} قاعدة', 'Saved {n} rules', '{n} kural kaydedildi'],
+  'rules.empty': ['لا توجد قواعد — أضف قاعدة بالزر أدناه', 'No rules yet — add one below', 'Henüz kural yok — aşağıdan ekleyin'],
+  'rules.patternPh': ['كلمة مفتاحية في الرابط، مثال: github.com', 'Keyword in URL, e.g. github.com', 'Anahtar kelime, örn: github.com'],
+  'rules.folderPh': ['C:\\Downloads\\...', 'C:\\Downloads\\...', 'C:\\Downloads\\...'],
+  'rules.browse': ['تصفح مجلد', 'Browse folder', 'Klasör seç'],
+  'rules.del': ['حذف القاعدة', 'Delete rule', 'Kuralı sil'],
+  'import.title': ['📄 استيراد جماعي', '📄 Bulk Import', '📄 Toplu içe aktarma'],
+  'import.pickFile': ['📂 اختيار ملف نصي…', '📂 Pick a text file…', '📂 Metin dosyası seç…'],
+  'import.urls': ['الروابط (رابط واحد في كل سطر — سيتم تخطي المكرر وغير الصالح تلقائياً)', 'URLs (one per line — duplicates & invalid lines are skipped automatically)', 'Bağlantılar (her satıra bir tane)'],
+  'import.cancel': ['إلغاء', 'Cancel', 'İptal'],
+  'import.go': ['استيراد وبدء التحميل', 'Import & start downloading', 'İçe aktar ve başlat'],
+  'import.done': ['تمت إضافة {added} تحميلاً', 'Added {added} downloads', '{added} indirme eklendi'],
+  'import.dup': ['تخطي {n} مكرر', 'skipped {n} duplicates', '{n} yinelenen atlandı'],
+  'import.bad': ['تجاهل {n} غير صالح', 'ignored {n} invalid', '{n} geçersiz yoksayıldı'],
+  'import.empty': ['الصق رابطاً واحداً على الأقل', 'Paste at least one URL', 'En az bir bağlantı yapıştırın'],
+  'import.fail': ['تعذر الاستيراد: {msg}', 'Import failed: {msg}', 'İçe aktarma başarısız: {msg}'],
+  'video.title': ['🎬 تحميل فيديو', '🎬 Video Download', '🎬 Video indirme'],
+  'video.urlPh': ['رابط فيديو (YouTube، Twitter، TikTok، .m3u8، ...)', 'Video URL (YouTube, Twitter, TikTok, .m3u8, ...)', 'Video bağlantısı (YouTube, .m3u8, ...)'],
+  'video.probe': ['فحص الرابط', 'Check URL', 'Kontrol et'],
+  'video.probing': ['⏳ جاري فحص الرابط... (في أول استخدام يتم تنزيل yt-dlp تلقائياً)', '⏳ Checking URL... (first use downloads yt-dlp automatically)', '⏳ Kontrol ediliyor... (ilk kullanımda yt-dlp otomatik indirilir)'],
+  'video.quality': ['اختر الجودة', 'Choose quality', 'Kalite seçin'],
+  'video.entries': ['عناصر قائمة التشغيل — اختر ما تريد تحميله', 'Playlist entries — select what to download', 'Oynatma listesi öğeleri — seçin'],
+  'video.all': ['⬇ تحميل كل العناصر', '⬇ Download all entries', '⬇ Tüm öğeleri indir'],
+  'video.playlist': ['قائمة تشغيل', 'Playlist', 'Oynatma listesi'],
+  'video.folder': ['مجلد الحفظ', 'Save folder', 'Kayıt klasörü'],
+  'video.cancel': ['إلغاء', 'Cancel', 'İptal'],
+  'video.start': ['بدء التحميل', 'Start Download', 'İndirmeyi başlat'],
+  'video.added': ['أُضيف تحميل الفيديو — تابع تقدمه في القائمة 🎬', 'Video download added — track it in the list 🎬', 'Video indirmesi eklendi 🎬'],
+  'video.fail': ['تعذر البدء: {msg}', 'Failed to start: {msg}', 'Başlatılamadı: {msg}'],
+  'video.badUrl': ['أدخل رابطاً صحيحاً يبدأ بـ http', 'Enter a valid URL starting with http', 'http ile başlayan geçerli bir bağlantı girin'],
+  'video.duration': ['المدة', 'Duration', 'Süre'],
+  'video.stream': ['بث HLS/M3U8', 'HLS/M3U8 stream', 'HLS/M3U8 yayın'],
+  'video.hint': ['يدعم آلاف المواقع (YouTube, Twitter, TikTok...) وروابط M3U8 وقوائم التشغيل', 'Supports 1000s of sites, M3U8 streams and playlists', 'Binlerce site, M3U8 ve oynatma listeleri'],
+  'torrent.title': ['🧲 تحميل تورنت / ماغنت', '🧲 Torrent / Magnet', '🧲 Torrent / Magnet'],
+  'torrent.magnet': ['رابط ماغنت أو ملف .torrent', 'Magnet link or .torrent URL', 'Magnet bağlantısı veya .torrent'],
+  'torrent.magnetPh': ['magnet:?xt=urn:btih:...', 'magnet:?xt=urn:btih:...', 'magnet:?xt=urn:btih:...'],
+  'torrent.probe': ['فحص الماغنت', 'Fetch magnet info', 'Magnet bilgisini al'],
+  'torrent.probing': ['⏳ جاري جلب بيانات التورنت من المصادر... (حتى 90 ثانية)', '⏳ Fetching torrent metadata from peers... (up to 90s)', '⏳ Torrent verileri alınıyor... (90 sn)'],
+  'torrent.files': ['الملفات — اختر ما تريد تحميله', 'Files — select what to download', 'Dosyalar — seçin'],
+  'torrent.folder': ['مجلد الحفظ', 'Save folder', 'Kayıt klasörü'],
+  'torrent.start': ['بدء التحميل', 'Start Download', 'İndirmeyi başlat'],
+  'torrent.cancel': ['إلغاء', 'Cancel', 'İptal'],
+  'torrent.all': ['⬇ تحميل كل الملفات', '⬇ Download all files', '⬇ Tüm dosyaları indir'],
+  'torrent.selected': ['⬇ تحميل المحدد ({n})', '⬇ Download selected ({n})', '⬇ Seçilenleri indir ({n})'],
+  'torrent.added': ['أُضيف التحميل 🧲 — تابع تقدمه في القائمة', 'Download added 🧲 — track it in the list', 'İndirme eklendi 🧲'],
+  'torrent.existed': ['هذا التورنت قيد التحميل بالفعل', 'This torrent is already downloading', 'Bu torrent zaten indiriliyor'],
+  'torrent.fail': ['تعذر: {msg}', 'Failed: {msg}', 'Başarısız: {msg}'],
+  'torrent.peers': ['{n} مصدر', '{n} peers', '{n} kaynak'],
+  'set.title': ['الإعدادات', 'Settings', 'Ayarlar'],
+  'set.dir': ['مجلد التحميلات الافتراضي', 'Default downloads folder', 'Varsayılan klasör'],
+  'set.rulesBtn': ['📐 إدارة القواعد التلقائية (توجيه الروابط لمجلدات حسب كلمات مفتاحية)', '📐 Manage auto rules (route URLs to folders by keywords)', '📐 Otomatik kuralları yönet'],
+  'set.concurrent': ['تحميلات متزامنة', 'Concurrent downloads', 'Eşzamanlı indirme'],
+  'set.connections': ['اتصالات لكل ملف (تسريع)', 'Connections per file (acceleration)', 'Dosya başına bağlantı'],
+  'set.organize': ['ترتيب الملفات تلقائياً في مجلدات حسب النوع', 'Auto-organize files into category folders', 'Otomatik düzenle'],
+  'set.clipboard': ['مراقبة الحافظة واقتراح الروابط المنسوخة', 'Monitor clipboard & suggest copied links', 'Panoyu izle ve öner'],
+  'set.autoFloat': ['إظهار النافذة العائمة تلقائياً أثناء التحميل', 'Auto-show floating window during downloads', 'İndirme sırasında yüzen pencereyi göster'],
+  'set.maxSpeed': ['تحديد السرعة القصوى للتحميل (0 = بلا حدود)', 'Max download speed (0 = unlimited)', 'Maksimum hız (0 = sınırsız)'],
+  'set.theme': ['المظهر', 'Theme', 'Tema'],
+  'set.themeDark': ['داكن', 'Dark', 'Koyu'],
+  'set.themeLight': ['فاتح', 'Light', 'Açık'],
+  'set.lang': ['اللغة / Language', 'Language / اللغة', 'Dil / Dil'],
+  'set.sched': ['الجدولة الزمنية', 'Scheduler', 'Zamanlayıcı'],
+  'set.schedOn': ['تفعيل الجدولة (بدء/إيقاف تلقائي)', 'Enable scheduler (auto start/stop)', 'Zamanlayıcıyı etkinleştir'],
+  'set.schedStart': ['بدء في', 'Start at', 'Başlangıç'],
+  'set.schedStop': ['إيقاف في', 'Stop at', 'Duraklama'],
+  'set.storage': ['قاعدة البيانات', 'Database', 'Veritabanı'],
+  'set.storageSqlite': ['SQLite ⚡', 'SQLite ⚡', 'SQLite ⚡'],
+  'set.storageJson': ['JSON (احتياطي)', 'JSON (fallback)', 'JSON (yedek)'],
+  'set.cancel': ['إلغاء', 'Cancel', 'İptal'],
+  'set.save': ['حفظ الإعدادات', 'Save settings', 'Ayarları kaydet'],
+  'set.saved': ['تم حفظ الإعدادات', 'Settings saved', 'Ayarlar kaydedildi'],
+  'eta.h': ['ساعة', 'h', 'sa'],
+  'eta.m': ['دقيقة', 'min', 'dk'],
+  'eta.s': ['ثانية', 's', 'sn'],
+  'conn.count': ['{n} اتصالات', '{n} connections', '{n} bağlantı'],
+  'act.pause': ['إيقاف مؤقت', 'Pause', 'Duraklat'],
+  'act.resume': ['استئناف/إعادة', 'Resume/Retry', 'Sürdür/Tekrar'],
+  'act.restart': ['إعادة من البداية', 'Restart from scratch', 'Baştan başlat'],
+  'act.open': ['فتح الملف', 'Open file', 'Dosyayı aç'],
+  'act.folder': ['إظهار في المجلد', 'Show in folder', 'Klasörde göster'],
+  'act.remove': ['حذف', 'Delete', 'Sil'],
+  'act.up': ['تقديم في الطابور', 'Move up in queue', 'Sırada yukarı'],
+  'act.down': ['تأجيل في الطابور', 'Move down in queue', 'Sırada aşağı'],
+  'act.now': ['تحميل الآن (تخطي الطابور)', 'Download now (skip queue)', 'Hemen indir'],
+  'act.vcancel': ['إلغاء', 'Cancel', 'İptal'],
+  'act.vremove': ['إزالة من القائمة', 'Remove from list', 'Listeden kaldır'],
+  'clip.captured': ['تم التقاط رابط من الحافظة', 'Link captured from clipboard', 'Panodan bağlantı alındı'],
+  'update.available': ['🎉 يتوفر تحديث جديد v{v} — جاري التنزيل...', '🎉 New update v{v} available — downloading...', '🎉 Yeni güncelleme v{v} — indiriliyor...'],
+  'update.downloading': ['جاري تنزيل التحديث... {p}%', 'Downloading update... {p}%', 'Güncelleme indiriliyor... %{p}'],
+  'update.downloaded': ['✅ تم تنزيل التحديث v{v} — أعد التشغيل للتثبيت', '✅ Update v{v} downloaded — restart to install', '✅ Güncelleme v{v} indirildi — yeniden başlat'],
+  'update.restart': ['🔄 تثبيت وإعادة تشغيل', '🔄 Install & restart', '🔄 Yükle ve yeniden başlat'],
+  'update.none': ['أنت على أحدث إصدار ✓', 'You are on the latest version ✓', 'En son sürümdesiniz ✓'],
+  'update.check': ['🔄 التحقق من التحديثات', '🔄 Check for updates', '🔄 Güncellemeleri kontrol et'],
+  'update.checking': ['⏳ جاري التحقق من التحديثات...', '⏳ Checking for updates...', '⏳ Kontrol ediliyor...'],
+  'update.error': ['تعذر التحقق: {msg}', 'Update check failed: {msg}', 'Kontrol başarısız: {msg}'],
+  'update.dev': ['التحديثات التلقائية تعمل في النسخة المثبتة فقط (شغّل نسخة exe)', 'Auto-updates work in the installed (exe) version only', 'Otomatik güncellemeler yalnızca kurulu sürümde çalışır'],
+  'update.current': ['الإصدار الحالي: v{v}', 'Current version: v{v}', 'Mevcut sürüm: v{v}']
+};
+
+const I18N = { ar: {}, en: {}, tr: {} };
+for (const [k, v] of Object.entries(STR)) {
+  I18N.ar[k] = v[0];
+  I18N.en[k] = v[1];
+  I18N.tr[k] = v[2];
+}
+
+let _lang = 'ar';
+
+function t(key, params) {
+  let s = (I18N[_lang] && I18N[_lang][key]) || I18N.ar[key] || key;
+  if (params) {
+    for (const k of Object.keys(params)) {
+      s = s.split('{' + k + '}').join(params[k]);
+    }
+  }
+  return s;
+}
+
+function setLang(lang) {
+  _lang = I18N[lang] ? lang : 'ar';
+  document.documentElement.lang = _lang;
+  document.documentElement.dir = _lang === 'ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.getAttribute('data-i18n-title')); });
+}
+
+function getLang() { return _lang; }
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { t, setLang, getLang, I18N };

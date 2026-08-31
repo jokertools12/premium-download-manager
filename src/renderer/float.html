@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Premium DM - Float</title>
+  <link rel="stylesheet" href="float.css">
+</head>
+<body>
+  <div id="fcard">
+    <div class="f-head">
+      <span id="fCount" class="f-badge">0 نشط</span>
+      <span class="f-title">Premium DM</span>
+      <div class="f-btns">
+        <button id="fPause" title="إيقاف كل التحميلات">⏸</button>
+        <button id="fOpen" title="فتح النافذة الرئيسية">⧉</button>
+        <button id="fClose" title="إخفاء">✕</button>
+      </div>
+    </div>
+    <div id="fName" class="f-name">لا توجد تحميلات نشطة</div>
+    <div class="f-bar"><div id="fBar"></div></div>
+    <div class="f-meta">
+      <span id="fSpeed">▲ 0 B/s</span>
+      <span id="fPct">0%</span>
+    </div>
+  </div>
+  <script src="float.js"></script>
+</body>
+</html>

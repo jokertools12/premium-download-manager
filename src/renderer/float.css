@@ -1,0 +1,76 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+#fcard {
+  height: 100vh;
+  background: linear-gradient(160deg, #151d30, #0d1322);
+  border: 1px solid #2a3a63;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  -webkit-app-region: drag;
+  color: #e8edf7;
+  user-select: none;
+}
+
+.f-head { display: flex; align-items: center; gap: 8px; }
+.f-title { font-weight: 700; font-size: 11.5px; color: #8b98b8; letter-spacing: .3px; }
+.f-badge {
+  background: rgba(79, 140, 255, .18);
+  color: #4f8cff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+.f-btns { margin-inline-start: auto; display: flex; gap: 2px; }
+.f-btns button {
+  -webkit-app-region: no-drag;
+  width: 26px; height: 22px;
+  background: transparent; border: none;
+  color: #8b98b8; cursor: pointer;
+  border-radius: 6px; font-size: 11px;
+}
+.f-btns button:hover { background: #1a2440; color: #e8edf7; }
+
+.f-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+.f-bar {
+  height: 7px;
+  border-radius: 6px;
+  background: #0b0f1a;
+  border: 1px solid #232f4d;
+  overflow: hidden;
+}
+.f-bar > div {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4f8cff, #7b5cff);
+  border-radius: 6px;
+  transition: width .4s ease;
+}
+
+.f-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #34d399;
+}
+#fPct { color: #8b98b8; }

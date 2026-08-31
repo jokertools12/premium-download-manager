@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Premium Download Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- شريط العنوان المخصص -->
+  <header id="titlebar">
+    <div class="tb-brand"><span class="logo">⚡</span> Premium DM</div>
+    <div id="totalSpeed" class="tb-speed" title="Total speed"><span>▲</span> 0 B/s</div>
+    <div class="tb-controls">
+      <button id="btnMin" title="Minimize">&#x2500;</button>
+      <button id="btnMax" title="Maximize/Restore">&#x25A1;</button>
+      <button id="btnClose" class="danger" title="Hide to tray">&#x2715;</button>
+    </div>
+  </header>
+
+  <!-- شريط التحديث التلقائي -->
+  <div id="updateBanner" class="update-banner" hidden>
+    <span id="updateIcon">🔄</span>
+    <span id="updateText"></span>
+    <div class="ub-bar" id="updateBarWrap" hidden><div id="updateBar"></div></div>
+    <button id="btnUpdateInstall" class="btn primary" data-i18n="update.restart" hidden>تثبيت وإعادة تشغيل</button>
+    <button id="btnUpdateClose" class="ub-close">✕</button>
+  </div>
+
+  <div id="layout">
+    <!-- القائمة الجانبية -->
+    <aside id="sidebar">
+      <nav id="sideFilters"></nav>
+      <button id="btnDashboard" class="side-item"><span>📊</span><span data-i18n="side.dashboard">الإحصائيات</span></button>
+      <button id="btnRules" class="side-item"><span>📐</span><span data-i18n="side.rules">القواعد التلقائية</span></button>
+      <div class="side-sep"></div>
+      <div class="side-title" data-i18n="side.cats">التصنيفات</div>
+      <nav id="sideCats"></nav>
+      <div class="side-flex"></div>
+      <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main id="main">
+      <div id="toolbar">
+        <button id="btnAdd" class="btn primary" data-i18n="toolbar.add">＋ رابط جديد</button>
+        <button id="btnVideo" class="btn ghost" data-i18n="toolbar.video" data-i18n-title="toolbar.videoTitle">🎬 فيديو</button>
+        <button id="btnTorrent" class="btn ghost" data-i18n="toolbar.torrent" data-i18n-title="toolbar.torrentTitle">🧲 تورنت</button>
+        <input id="search" type="text" data-i18n-ph="toolbar.searchPh" placeholder="🔍 ابحث في التحميلات...">
+        <div class="spacer"></div>
+        <button id="btnResumeAll" class="btn ghost" data-i18n="toolbar.resumeAll" data-i18n-title="toolbar.resumeAllTitle">▶ الكل</button>
+        <button id="btnPauseAll" class="btn ghost" data-i18n="toolbar.pauseAll" data-i18n-title="toolbar.pauseAllTitle">⏸ الكل</button>
+        <button id="btnClear" class="btn ghost" data-i18n-title="toolbar.clearTitle">🧹</button>
+        <button id="btnImport" class="btn ghost" data-i18n-title="toolbar.importTitle">📄</button>
+        <button id="btnFloat" class="btn ghost" data-i18n-title="toolbar.floatTitle">📌</button>
+      </div>
+      <div id="list"></div>
+      <div id="empty" hidden>
+        <div class="empty-icon">📥</div>
+        <div class="empty-title" data-i18n="empty.title">لا توجد تحميلات هنا</div>
+        <div class="empty-sub" data-i18n="empty.sub">أضف رابطاً جديداً أو انسخ رابطاً إلى الحافظة، أو اسحب رابطاً وأفلته هنا</div>
+      </div>
+      <!-- لوحة الإحصائيات -->
+      <section id="dashboard" hidden>
+        <div id="statCards" class="stat-grid"></div>
+        <div class="chart-box">
+          <h4 data-i18n="dash.title.speed">📈 سرعة التحميل — آخر 60 ثانية</h4>
+          <canvas id="speedChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <h4 data-i18n="dash.title.cats">🗂️ التوزيع حسب التصنيف</h4>
+          <div id="catDist"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- نافذة إضافة رابط -->
+  <div id="addModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><h3 data-i18n="add.title">تحميل جديد</h3><button class="modal-x" data-close="addModal">✕</button></div>
+      <label class="fld"><span data-i18n="add.url">الرابط</span>
+        <input id="addUrl" type="text" dir="ltr" data-i18n-ph="add.urlPh" placeholder="https://example.com/file.zip">
+      </label>
+      <label class="fld"><span data-i18n="add.name">اسم الملف (اختياري)</span>
+        <input id="addName" type="text" dir="auto" data-i18n-ph="add.namePh" placeholder="يُحدد تلقائياً من الرابط">
+      </label>
+      <label class="fld"><span data-i18n="add.mirrors">روابط بديلة Mirrors (اختياري)</span>
+        <textarea id="addMirrors" rows="2" dir="ltr" placeholder="https://mirror1.com/file.zip"></textarea>
+      </label>
+      <label class="fld"><span data-i18n="add.folder">مجلد الحفظ</span>
+        <div class="row"><input id="addDir" type="text" dir="ltr"><button id="btnBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
+      </label>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="addModal" data-i18n="add.cancel">إلغاء</button>
+        <button id="btnStartDownload" class="btn primary" data-i18n="add.start">بدء التحميل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة القواعد التلقائية -->
+  <div id="rulesModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 data-i18n="rules.title">📐 القواعد التلقائية</h3><button class="modal-x" data-close="rulesModal">✕</button></div>
+      <div class="rules-hint" data-i18n="rules.hint"></div>
+      <div id="rulesList"></div>
+      <button id="btnAddRule" class="btn ghost" style="width:100%" data-i18n="rules.new">＋ قاعدة جديدة</button>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="rulesModal" data-i18n="rules.close">إغلاق</button>
+        <button id="btnSaveRules" class="btn primary" data-i18n="rules.save">حفظ القواعد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة الاستيراد الجماعي -->
+  <div id="importModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 data-i18n="import.title">📄 استيراد جماعي</h3><button class="modal-x" data-close="importModal">✕</button></div>
+      <div class="row" style="margin-bottom:12px; align-items:center;">
+        <button id="btnImportFile" class="btn ghost" data-i18n="import.pickFile">📂 اختيار ملف نصي…</button>
+        <span id="importFileHint" class="hint"></span>
+      </div>
+      <label class="fld"><span data-i18n="import.urls">الروابط</span>
+        <textarea id="importText" rows="9" dir="ltr" placeholder="https://example.com/file1.zip"></textarea>
+      </label>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="importModal" data-i18n="import.cancel">إلغاء</button>
+        <button id="btnDoImport" class="btn primary" data-i18n="import.go">استيراد وبدء التحميل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة تحميل الفيديو -->
+  <div id="videoModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 data-i18n="video.title">🎬 تحميل فيديو</h3><button class="modal-x" data-close="videoModal">✕</button></div>
+      <div class="row" style="margin-bottom:12px;">
+        <input id="vidUrl" type="text" dir="ltr" data-i18n-ph="video.urlPh" style="flex:1">
+        <button id="btnProbe" class="btn primary" data-i18n="video.probe">فحص الرابط</button>
+      </div>
+      <div id="vidInfo" class="vid-info" hidden>
+        <div id="vidTitle" class="vid-title"></div>
+        <div id="vidMeta" class="hint"></div>
+      </div>
+      <div id="vidEntriesWrap" hidden>
+        <label class="fld"><span data-i18n="video.entries">عناصر قائمة التشغيل</span>
+          <div id="vidEntries" class="tor-files"></div>
+        </label>
+      </div>
+      <label class="fld" id="vidFormatsWrap" hidden><span data-i18n="video.quality">اختر الجودة</span>
+        <select id="vidFormats" size="8"></select>
+      </label>
+      <label class="fld"><span data-i18n="video.folder">مجلد الحفظ</span>
+        <div class="row"><input id="vidDir" type="text" dir="ltr"><button id="vidBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
+      </label>
+      <div id="vidStatus" class="hint"></div>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="videoModal" data-i18n="video.cancel">إلغاء</button>
+        <button id="btnVidAll" class="btn primary" hidden data-i18n="video.all">⬇ تحميل كل العناصر</button>
+        <button id="btnVideoDownload" class="btn primary" disabled data-i18n="video.start">بدء التحميل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة التورنت -->
+  <div id="torrentModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 data-i18n="torrent.title">🧲 تحميل تورنت / ماغنت</h3><button class="modal-x" data-close="torrentModal">✕</button></div>
+      <div class="row" style="margin-bottom:12px;">
+        <input id="torMagnet" type="text" dir="ltr" data-i18n-ph="torrent.magnetPh" style="flex:1">
+        <button id="btnTorProbe" class="btn primary" data-i18n="torrent.probe">فحص الماغنت</button>
+      </div>
+      <div id="torInfo" class="vid-info" hidden>
+        <div id="torTitle" class="vid-title"></div>
+        <div id="torMeta" class="hint"></div>
+      </div>
+      <div id="torFilesWrap" hidden>
+        <label class="fld"><span data-i18n="torrent.files">الملفات</span>
+          <div id="torFiles" class="tor-files"></div>
+        </label>
+      </div>
+      <label class="fld"><span data-i18n="torrent.folder">مجلد الحفظ</span>
+        <div class="row"><input id="torDir" type="text" dir="ltr"><button id="torBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
+      </label>
+      <div id="torStatus" class="hint"></div>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="torrentModal" data-i18n="torrent.cancel">إلغاء</button>
+        <button id="btnTorAll" class="btn primary" hidden data-i18n="torrent.all">⬇ تحميل كل الملفات</button>
+        <button id="btnTorSelected" class="btn primary" hidden data-i18n="torrent.selected">⬇ تحميل المحدد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة الإعدادات -->
+  <div id="settingsModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 data-i18n="set.title">الإعدادات</h3><button class="modal-x" data-close="settingsModal">✕</button></div>
+      <div class="settings-grid">
+        <label class="fld"><span data-i18n="set.dir">مجلد التحميلات الافتراضي</span>
+          <div class="row"><input id="stDir" type="text" dir="ltr"><button id="stBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
+        </label>
+        <div class="row"><button id="btnOpenRules" class="btn ghost" style="width:100%" data-i18n="set.rulesBtn">📐 إدارة القواعد التلقائية</button></div>
+        <div class="row">
+          <label class="fld"><span data-i18n="set.concurrent">تحميلات متزامنة</span>
+            <input id="stConcurrent" type="number" min="1" max="10">
+          </label>
+          <label class="fld"><span data-i18n="set.connections">اتصالات لكل ملف (تسريع)</span>
+            <input id="stConnections" type="number" min="1" max="32">
+          </label>
+        </div>
+        <label class="chk"><input id="stOrganize" type="checkbox"> <span data-i18n="set.organize">ترتيب الملفات تلقائياً في مجلدات حسب النوع</span></label>
+        <label class="chk"><input id="stClipboard" type="checkbox"> <span data-i18n="set.clipboard">مراقبة الحافظة واقتراح الروابط المنسوخة</span></label>
+        <label class="chk"><input id="stAutoFloat" type="checkbox"> <span data-i18n="set.autoFloat">إظهار النافذة العائمة تلقائياً أثناء التحميل</span></label>
+        <label class="fld"><span data-i18n="set.maxSpeed">تحديد السرعة القصوى للتحميل (0 = بلا حدود)</span>
+          <div class="row">
+            <input id="stMaxSpeed" type="number" min="0" step="any" placeholder="0">
+            <select id="stSpeedUnit"><option value="kb">KB/s</option><option value="mb">MB/s</option></select>
+          </div>
+        </label>
+        <div class="row">
+          <label class="fld"><span data-i18n="set.theme">المظهر</span>
+            <select id="stTheme"><option value="dark" data-i18n="set.themeDark">داكن</option><option value="light" data-i18n="set.themeLight">فاتح</option></select>
+          </label>
+          <label class="fld"><span data-i18n="set.lang">اللغة / Language</span>
+            <select id="stLang"><option value="ar">العربية</option><option value="en">English</option><option value="tr">Türkçe</option></select>
+          </label>
+        </div>
+        <div class="side-title" data-i18n="set.sched">الجدولة الزمنية</div>
+        <label class="chk"><input id="stSched" type="checkbox"> <span data-i18n="set.schedOn">تفعيل الجدولة (بدء/إيقاف تلقائي)</span></label>
+        <div class="row">
+          <label class="fld"><span data-i18n="set.schedStart">بدء في</span>
+            <input id="stStartAt" type="time">
+          </label>
+          <label class="fld"><span data-i18n="set.schedStop">إيقاف في</span>
+            <input id="stStopAt" type="time">
+          </label>
+        </div>
+        <div class="hint" id="stStorage"></div>
+        <div class="row" style="align-items:center;">
+          <button id="btnCheckUpdate" class="btn ghost" data-i18n="update.check">🔄 التحقق من التحديثات</button>
+          <span id="updVersion" class="hint"></span>
+        </div>
+      </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="settingsModal" data-i18n="set.cancel">إلغاء</button>
+        <button id="btnSaveSettings" class="btn primary" data-i18n="set.save">حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
