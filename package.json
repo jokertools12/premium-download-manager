@@ -25,6 +25,13 @@
     "files": [
       "src/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "src/extension",
+        "to": "extension",
+        "filter": ["**/*", "!install.bat"]
+      }
+    ],
     "win": {
       "target": [
         "nsis"
@@ -33,7 +40,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh"
     }
   },
   "devDependencies": {

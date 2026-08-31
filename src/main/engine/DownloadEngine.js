@@ -66,7 +66,7 @@ class DownloadEngine extends EventEmitter {
     return t;
   }
 
-  addTask({ url, filename, dir, headers, mirrors } = {}) {
+  addTask({ url, filename, dir, headers, mirrors, referer } = {}) {
     url = String(url || '').trim();
     if (!/^https?:\/\//i.test(url)) throw new Error('رابط غير صالح');
     for (const t of this.tasks.values()) {
@@ -74,6 +74,8 @@ class DownloadEngine extends EventEmitter {
         return { existed: true, task: t.snapshot() };
       }
     }
+    const allHeaders = { ...(headers || {}) };
+    if (referer) allHeaders.referer = String(referer).trim();
     const altMirrors = Array.isArray(mirrors)
       ? mirrors.map(u => String(u || '').trim()).filter(u => /^https?:\/\//i.test(u) && u !== url)
       : [];
@@ -95,7 +97,7 @@ class DownloadEngine extends EventEmitter {
     if (!d) d = this.settings.downloadDir;
     const id = crypto.randomUUID();
     const t = this._create({
-      id, url, filename: fname, dir: d, category, headers, mirrors: altMirrors,
+      id, url, filename: fname, dir: d, category, headers: allHeaders, mirrors: altMirrors,
       status: 'queued', createdAt: Date.now()
     });
     this.db.upsertTask(t.snapshot());

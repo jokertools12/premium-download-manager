@@ -57,6 +57,7 @@ const STR = {
   'add.browse': ['تصفح…', 'Browse…', 'Gözat…'],
   'add.cancel': ['إلغاء', 'Cancel', 'İptal'],
   'add.start': ['بدء التحميل', 'Start Download', 'İndirmeyi başlat'],
+  'add.referer': ['مصدر الإحالة Referer (اختياري — لبعض المواقع المحمية)', 'Referrer (optional — for protected/hotlink sites)', 'Yönlendiren (isteğe bağlı — korumalı siteler)'],
   'add.existed': ['هذا الرابط قيد التحميل بالفعل', 'This URL is already downloading', 'Bu bağlantı zaten indiriliyor'],
   'add.added': ['تمت إضافة التحميل', 'Download added', 'İndirme eklendi'],
   'add.badUrl': ['الرجاء إدخال رابط صحيح يبدأ بـ http', 'Enter a valid URL starting with http', 'http ile başlayan geçerli bir bağlantı girin'],
@@ -171,7 +172,22 @@ const STR = {
   'update.checking': ['⏳ جاري التحقق من التحديثات...', '⏳ Checking for updates...', '⏳ Kontrol ediliyor...'],
   'update.error': ['تعذر التحقق: {msg}', 'Update check failed: {msg}', 'Kontrol başarısız: {msg}'],
   'update.dev': ['التحديثات التلقائية تعمل في النسخة المثبتة فقط (شغّل نسخة exe)', 'Auto-updates work in the installed (exe) version only', 'Otomatik güncellemeler yalnızca kurulu sürümde çalışır'],
-  'update.current': ['الإصدار الحالي: v{v}', 'Current version: v{v}', 'Mevcut sürüm: v{v}']
+  'update.current': ['الإصدار الحالي: v{v}', 'Current version: v{v}', 'Mevcut sürüm: v{v}'],
+  'ext.title': ['🌐 إضافة المتصفح', '🌐 Browser Extension', '🌐 Tarayıcı eklentisi'],
+  'ext.registered': ['مثبتة ✓', 'Registered ✓', 'Kayıtlı ✓'],
+  'ext.notRegistered': ['غير مثبتة', 'Not registered', 'Kayıtlı değil'],
+  'ext.uninstall': ['إزالة التسجيل', 'Unregister', 'Kaydı sil'],
+  'ext.folder': ['📂 فتح مجلد الإضافة (للتحميل اليدوي إلى المتصفح)', '📂 Open extension folder (load manually in browser)', '📂 Eklenti klasörünü aç'],
+  'ext.hint': ['اضغط ＋ بجانب المتصفح لتثبيت الجسر، ثم حمّل الإضافة إلى المتصفح من مجلد الإضافة (وضع المطور → تحميل غير مضغوطة). Chrome و Edge يُسجلان تلقائياً عند تثبيت البرنامج.', 'Press ＋ next to a browser to install the bridge, then load the extension from the extension folder (Developer mode → Load unpacked). Chrome & Edge are auto-registered on app install.', 'Tarayıcı yanındaki ＋ ile köprüyü kurun, sonra eklentiyi tarayıcıya yükleyin.'],
+  'ext.done': ['تم تثبيت جسر {b} ✓', '{b} bridge installed ✓', '{b} köprüsü kuruldu ✓'],
+  'ext.removed': ['تمت إزالة التسجيل', 'Registration removed', 'Kayıt silindi'],
+  'ctx.copyLink': ['نسخ الرابط', 'Copy link', 'Bağlantıyı kopyala'],
+  'ctx.removeTask': ['حذف المهمة', 'Delete task', 'Görevi sil'],
+  'ctx.removeWithFile': ['حذف المهمة مع الملف', 'Delete task + file', 'Görevi ve dosyayı sil'],
+  'ctx.confirmDeleteFile': ['هل تريد حذف المهمة والملف من القرص نهائياً؟', 'Delete the task AND its file from disk permanently?', 'Görevi ve dosyayı kalıcı olarak sil?'],
+  'ctx.paste': ['لصق الرابط من الحافظة', 'Paste link from clipboard', 'Panodan yapıştır'],
+  'ctx.downloadsFolder': ['فتح مجلد التحميلات', 'Open downloads folder', 'İndirme klasörünü aç'],
+  'ctx.noLink': ['لا يوجد رابط في الحافظة', 'No link in clipboard', 'Panoda bağlantı yok']
 };
 
 const I18N = { ar: {}, en: {}, tr: {} };

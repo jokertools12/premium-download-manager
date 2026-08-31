@@ -88,6 +88,9 @@
       <label class="fld"><span data-i18n="add.mirrors">روابط بديلة Mirrors (اختياري)</span>
         <textarea id="addMirrors" rows="2" dir="ltr" placeholder="https://mirror1.com/file.zip"></textarea>
       </label>
+      <label class="fld"><span data-i18n="add.referer">مصدر الإحالة Referer (اختياري — لبعض المواقع المحمية)</span>
+        <input id="addReferer" type="text" dir="ltr" placeholder="https://cimanowtv.com/">
+      </label>
       <label class="fld"><span data-i18n="add.folder">مجلد الحفظ</span>
         <div class="row"><input id="addDir" type="text" dir="ltr"><button id="btnBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
       </label>
@@ -240,6 +243,12 @@
           <button id="btnCheckUpdate" class="btn ghost" data-i18n="update.check">🔄 التحقق من التحديثات</button>
           <span id="updVersion" class="hint"></span>
         </div>
+        <div class="side-title" data-i18n="ext.title">🌐 إضافة المتصفح</div>
+        <div id="extRows"></div>
+        <div class="row">
+          <button id="btnExtFolder" class="btn ghost" style="width:100%" data-i18n="ext.folder">📂 فتح مجلد الإضافة (للتحميل اليدوي إلى المتصفح)</button>
+        </div>
+        <div class="hint" data-i18n="ext.hint"></div>
       </div>
       </div>
       <div class="modal-foot">

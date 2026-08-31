@@ -3,7 +3,7 @@
 const fs = require('fs');
 const { ipcMain, dialog, shell } = require('electron');
 
-function setupIpc({ getWindow, db, engine, video, torrent, updater, floatApi, showMain }) {
+function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatApi, showMain }) {
   ipcMain.handle('pdm', async (_e, cmd, payload) => {
     const win = getWindow();
     switch (cmd) {
@@ -102,6 +102,28 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, floatApi, sh
       case 'update:install':
         if (updater) updater.install();
         return true;
+      case 'ext:status':
+        return host ? host.statusAll() : {};
+      case 'ext:register':
+        if (!host) throw new Error('غير متاح');
+        return host.register((payload || {}).browser);
+      case 'ext:unregister':
+        if (!host) throw new Error('غير متاح');
+        return host.unregister((payload || {}).browser);
+      case 'ext:openFolder': {
+        if (host) shell.openPath(host.extensionDir);
+        return true;
+      }
+      case 'copyText': {
+        const { clipboard } = require('electron');
+        clipboard.writeText(String((payload || {}).text || ''));
+        return true;
+      }
+      case 'openDownloadsFolder': {
+        const s = db.getSettings();
+        shell.openPath(s.downloadDir);
+        return true;
+      }
       case 'getSettings':
         return db.getSettings();
       case 'setSettings': {

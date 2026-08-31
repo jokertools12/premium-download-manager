@@ -392,6 +392,26 @@ button { font-family: inherit; }
   background: var(--bg); border: 1px solid var(--border);
   border-radius: 10px; padding: 6px;
 }
+
+/* ===== قائمة كليك يمين ===== */
+.ctx-menu {
+  position: fixed; z-index: 200;
+  min-width: 220px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 5px;
+  animation: pop .12s ease;
+}
+.ctx-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px; border-radius: 8px;
+  cursor: pointer; font-size: 13px; color: var(--text);
+}
+.ctx-item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.ctx-item .ci-icon { width: 18px; text-align: center; }
+.ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 .tor-file { margin: 0 0 4px 0 !important; padding: 6px 8px; border-radius: 8px; }
 .tor-file:hover { background: var(--card2); }
 .tor-file .tor-name {

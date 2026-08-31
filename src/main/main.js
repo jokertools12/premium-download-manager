@@ -13,6 +13,11 @@ const VideoManager = require('./integrations/VideoManager');
 const TorrentManager = require('./integrations/TorrentManager');
 const Updater = require('./updater');
 const { setupIpc } = require('./ipc');
+const { HostRegistrar } = require('./integrations/HostRegistrar');
+
+// وضع مضيف Native Messaging: المتصفح يشغّل البرنامج نفسه كمضيف
+// (نتعرف عليه من وسيط chrome-extension:// — يجب معالجته قبل قفل النسخة الواحدة)
+const HOST_MODE = process.argv.some(a => /^chrome-extension:\/\//i.test(a)) || process.argv.includes('--native-host');
 
 let win = null;
 let floatWin = null;
@@ -154,7 +159,10 @@ function createTray() {
   tray.on('click', () => showWindow());
 }
 
-if (!gotLock) {
+if (HOST_MODE) {
+  // المتصفح شغّلنا كمضيف: نعالج الرسالة ونخرج دون فتح أي نوافذ أو أقفال
+  require('./native-host-mode')();
+} else if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', (_e, argv) => {
@@ -208,6 +216,21 @@ if (!gotLock) {
     updater = new Updater({ send, appVersion: app.getVersion() });
     updater.startAutoCheck();
 
+    // مسجل مضيف Native Messaging + تسجيل تلقائي لأول تشغيل للنسخة المثبتة
+    const extensionDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'extension')
+      : path.join(app.getAppPath(), 'src', 'extension');
+    const host = new HostRegistrar({
+      userDataDir: app.getPath('userData'),
+      exePath: app.isPackaged ? app.getPath('exe') : '',
+      isPackaged: app.isPackaged,
+      extensionDir
+    });
+    if (app.isPackaged && !db.getSettings().hostsRegistered) {
+      host.autoRegisterDefaults(); // Chrome + Edge تلقائياً
+      db.updateSettings({ hostsRegistered: true });
+    }
+
     setupIpc({
       getWindow: () => win,
       db,
@@ -215,6 +238,7 @@ if (!gotLock) {
       video,
       torrent,
       updater,
+      host,
       floatApi: {
         toggle: toggleFloat,
         hide: () => { if (floatWin) floatWin.hide(); }

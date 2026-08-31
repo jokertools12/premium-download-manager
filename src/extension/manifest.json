@@ -1,9 +1,25 @@
 {
   "manifest_version": 3,
   "name": "Premium Download Manager Integration",
-  "version": "1.0.0",
-  "description": "يحوّل التحميلات من المتصفح إلى Premium Download Manager",
-  "permissions": ["downloads", "nativeMessaging"],
+  "version": "2.0.0",
+  "description": "يحوّل التحميلات من المتصفح إلى Premium Download Manager — مع إعدادات وقائمة كليك يمين",
+  "permissions": ["downloads", "nativeMessaging", "storage", "contextMenus"],
   "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Premium Download Manager",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuMvSzFuT1li56IZYpH9UQZe+lgJGVR7jkDqaiTbQQ18OeN/Ah5wQ/bje/ROGxpKkLfP25Y2B3Bn4oeXq5+ZKVMUlhmrJ5OsCC61REx3y1c+mP/uoEKN+Jc1N/5D44G8Hi59405b5oOCSsoJPJ4wkPaxP/F6xOQ4b65IK/YBBBN/lHi/hkxV1J1sHC3SU5qpq3jaXkN2FCZEJgHV9gjvZg0E0Vi9l4eb8m9oWs5+SXhGW1KJOTQYLhvlQG5PIm8RdCEXyKSG9rMrV172k4anoSfiaDdBsZcV49vOK0Q4+lGf+yrrbkfk6aJHeCjALho3Hz+BQDIRzFMRk4XgopyKG3wIDAQAB"
 }

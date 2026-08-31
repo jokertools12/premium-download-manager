@@ -69,6 +69,22 @@ async function evalIn(cdp, expr) {
   const ui = await evalIn(main, `JSON.stringify({banner: !!document.getElementById('updateBanner'), btn: !!document.getElementById('btnCheckUpdate'), ver: document.getElementById('updVersion').textContent})`);
   console.log('UI =>', ui);
 
+  // 3.5) حالة إضافة المتصفح + التسجيل الفعلي
+  const ext0 = await evalIn(main, `(async () => { return await window.pdm.invoke('ext:status'); })()`);
+  console.log('ext:status before =>', JSON.stringify(ext0));
+  const reg = await evalIn(main, `(async () => { return await window.pdm.invoke('ext:register', {browser:'chrome'}); })()`);
+  console.log('ext:register chrome =>', JSON.stringify(reg));
+  const ext1 = await evalIn(main, `(async () => { return await window.pdm.invoke('ext:status'); })()`);
+  console.log('ext:status after =>', JSON.stringify(ext1));
+  if (ext1.chrome !== 'registered') throw new Error('chrome registration failed');
+  const rows = await evalIn(main, `(async () => {
+    document.getElementById('btnSettings').click();
+    await new Promise(r=>setTimeout(r,1500));
+    return document.querySelectorAll('#extRows .row').length;
+  })()`);
+  console.log('settings rows =>', rows);
+  if (rows < 3) throw new Error('صفوف المتصفحات غير مكتملة');
+
   // 4) الترجمة
   const tr = await evalIn(main, `JSON.stringify({ar: window.t('update.check'), avail: window.t('update.available', {v:'9.9'})})`);
   console.log('i18n =>', tr);

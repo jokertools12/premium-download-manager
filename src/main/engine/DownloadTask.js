@@ -282,7 +282,7 @@ class DownloadTask extends EventEmitter {
       });
       if (res.status === 416) { seg.done = true; return; }
       if (headers.range && res.status === 200) {
-        if (this.segments.length > 1) throw new Error('الخادم لا يدعم التحميل المتعدد');
+        if (this.segments.length > 1) throw new Error('ERR_NO_RANGE');
         this.received -= seg.received;
         seg.received = 0;
       }
@@ -291,7 +291,15 @@ class DownloadTask extends EventEmitter {
       for await (const chunk of res.body) {
         if (this.aborted) throw new Error('aborted');
         if (this.limiter) await this.limiter.take(chunk.length, this);
-        await this.fd.write(chunk, 0, chunk.length, seg.start + seg.received);
+        // كتابة كاملة مع معالجة الكتابات الجزئية
+        let toWrite = chunk;
+        let pos = seg.start + seg.received;
+        while (toWrite.length) {
+          const w = await this.fd.write(toWrite, 0, toWrite.length, pos);
+          if (!w.bytesWritten) throw new Error('فشل كتابة البيانات على القرص');
+          pos += w.bytesWritten;
+          toWrite = toWrite.subarray(w.bytesWritten);
+        }
         seg.received += chunk.length;
         this.received += chunk.length;
       }
@@ -308,7 +316,28 @@ class DownloadTask extends EventEmitter {
       this.speed = 0;
       return;
     }
-    const msg = String((err && err.message) || err);
+    let msg = String((err && err.message) || err);
+    // رسالة أوضح لحماية الروابط (403)
+    if (/HTTP 403/.test(msg)) {
+      msg = 'HTTP 403 — الرابط محمي (يتطلب مصدر إحالة Referer). أضف حقل Referer عند الإضافة أو استخدم الإضافة من المتصفح';
+    }
+    // تراجع تلقائي: الخادم رفض التجزئة → اتصال واحد
+    if (msg.includes('ERR_NO_RANGE') && this.supportsRanges) {
+      this.supportsRanges = false;
+      this.segments = this.size
+        ? [{ start: 0, end: this.size - 1, received: 0, done: false }]
+        : [{ start: 0, end: null, received: 0, done: false }];
+      this.received = 0;
+      this._retries = 0;
+      this._fileReady = false;
+      this._last = { t: Date.now(), b: 0 };
+      this.status = 'queued';
+      this._emit();
+      setTimeout(() => {
+        if (!this.paused && !this.aborted && this.status === 'queued') this._resumeInternal();
+      }, 800);
+      return;
+    }
     if (this._retries < MAX_RETRIES && msg !== 'aborted') {
       this._retries += 1;
       this.status = 'queued';
@@ -330,6 +359,8 @@ class DownloadTask extends EventEmitter {
       this.status = 'failed';
       this.error = msg;
       this.speed = 0;
+      // لا نترك ملفاً فارغاً بحجم كامل إذا لم يُكتب أي بايت
+      if (!this.received) this._deleteOnStop = true;
     }
   }
 
@@ -342,6 +373,8 @@ class DownloadTask extends EventEmitter {
         await this._probe();
         this._needsReprobe = false;
       }
+      // إعادة المحاولة بعد فشل الفحص الأول: يجب تخصيص المقاطع أولاً
+      if (!this.segments.length) await this._initialize();
       await this._openFd();
       this._startTimer();
       await this._runAll();

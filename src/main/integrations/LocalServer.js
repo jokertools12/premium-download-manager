@@ -46,7 +46,7 @@ class LocalServer {
           });
         } else if (req.url === '/ping') {
           res.writeHead(200, { 'content-type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, app: 'PremiumDM', version: '1.0.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: '1.0.0' }));
         } else {
           res.writeHead(404);
           res.end();
