@@ -181,15 +181,15 @@ if (HOST_MODE) {
 
     engine.on('updated', (snap) => {
       const summary = combinedSummary();
-      // النافذة الرئيسية: تحديثات تفاضلية خفيفة
+      // النافذة الرئيسية: تحديثات تفاضلية خفيفة (full عند تغييرات هيكلية كالحذف)
       if (win && !win.isDestroyed()) {
         win.webContents.send('pdm:event', snap === null
-          ? { type: 'tasks', tasks: engine.list(), summary }
+          ? { type: 'tasks', full: true, tasks: engine.list(), summary }
           : { type: 'tasks', tasks: [snap], summary });
       }
       // النافذة العائمة: تحتاج القائمة الكاملة دائماً
       if (floatWin && !floatWin.isDestroyed()) {
-        floatWin.webContents.send('pdm:event', { type: 'tasks', tasks: engine.list(), summary });
+        floatWin.webContents.send('pdm:event', { type: 'tasks', full: true, tasks: engine.list(), summary });
       }
       applyAutoFloat();
     });

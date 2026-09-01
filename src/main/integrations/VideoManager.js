@@ -66,6 +66,22 @@ class VideoManager extends EventEmitter {
     if (changed) this.emit('updated', null);
   }
 
+  /* إزالة مهمة فيديو، مع إمكانية حذف الملف من القرص */
+  remove(id, deleteFile) {
+    const t = this.tasks.get(id);
+    if (!t) return;
+    if (t.status === 'downloading') this.cancel(id);
+    if (deleteFile && t.filePath) {
+      try {
+        const st = fs.statSync(t.filePath);
+        if (st.isDirectory()) fs.rmSync(t.filePath, { recursive: true, force: true });
+        else fs.unlinkSync(t.filePath);
+      } catch (_e) {}
+    }
+    this.tasks.delete(id);
+    this.emit('updated', t);
+  }
+
   _emit(t) { this.emit('updated', t); }
 
   /* ===== تنزيل الأدوات ===== */

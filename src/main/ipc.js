@@ -29,7 +29,7 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
         engine.cancel(payload);
         return true;
       case 'remove':
-        engine.removeTask(payload || {});
+        await engine.removeTask(payload || {});
         return true;
       case 'restart':
         engine.restart(payload);
@@ -79,9 +79,11 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
       case 'video:cancel':
         video.cancel((payload || {}).id);
         return true;
-      case 'video:remove':
-        video.remove((payload || {}).id);
+      case 'video:remove': {
+        const pv = payload || {};
+        video.remove(pv.id, !!pv.deleteFile);
         return true;
+      }
       case 'torrent:probe':
         return torrent.probe(String((payload || {}).magnet || ''));
       case 'torrent:download':
@@ -89,9 +91,11 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
       case 'torrent:cancel':
         torrent.cancel((payload || {}).id);
         return true;
-      case 'torrent:remove':
-        torrent.remove((payload || {}).id);
+      case 'torrent:remove': {
+        const pt = payload || {};
+        torrent.remove(pt.id, !!pt.deleteFile);
         return true;
+      }
       case 'dbInfo':
         return { mode: db.getMode() };
       case 'update:state':

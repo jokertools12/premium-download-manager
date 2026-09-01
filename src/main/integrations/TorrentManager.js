@@ -79,6 +79,18 @@ class TorrentManager extends EventEmitter {
     if (changed) this.emit('updated', null);
   }
 
+  /* إزالة مهمة تورنت مع إمكانية حذف مجلد الملفات */
+  remove(id, deleteFile) {
+    const t = this.tasks.get(id);
+    if (!t) return;
+    if (t.status === 'downloading') this.cancel(id);
+    if (deleteFile && t._torrent && t._torrent.path && t._torrent.name) {
+      try { fs.rmSync(path.join(t._torrent.path, t._torrent.name), { recursive: true, force: true }); } catch (_e) {}
+    }
+    this.tasks.delete(id);
+    this.emit('updated', t);
+  }
+
   _emit(t) { this.emit('updated', t); }
 
   /* فحص ماغنت: جلب اسم التورنت وقائمة ملفاته (دون تحميل) */

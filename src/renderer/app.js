@@ -730,11 +730,28 @@ function wireEvents() {
     else if (act === 'now') window.pdm.invoke('downloadNow', id);
     else if (act === 'open') window.pdm.invoke('openFile', { id });
     else if (act === 'folder') window.pdm.invoke('showInFolder', { id });
-    else if (act === 'remove') window.pdm.invoke('remove', { id, deleteFile: false });
+    else if (act === 'remove') {
+      // حذف فوري من الواجهة (تفاؤلي) ثم تأكيد من النواة
+      state.tasks.delete(id);
+      const el = document.querySelector(`.task[data-id="${id}"]`);
+      if (el) el.remove();
+      render();
+      window.pdm.invoke('remove', { id, deleteFile: false });
+    }
     else if (act === 'vcancel') window.pdm.invoke('video:cancel', { id });
-    else if (act === 'vremove') window.pdm.invoke('video:remove', { id });
+    else if (act === 'vremove') {
+      state.tasks.delete(id);
+      removeCardEl(id);
+      render();
+      window.pdm.invoke('video:remove', { id, deleteFile: false });
+    }
     else if (act === 'tcancel') window.pdm.invoke('torrent:cancel', { id });
-    else if (act === 'tremove') window.pdm.invoke('torrent:remove', { id });
+    else if (act === 'tremove') {
+      state.tasks.delete(id);
+      removeCardEl(id);
+      render();
+      window.pdm.invoke('torrent:remove', { id, deleteFile: false });
+    }
   });
 
   // إغلاق النوافذ
@@ -979,16 +996,50 @@ async function handleContextAction(id) {
         case 'pause': return void window.pdm.invoke('pause', t.id);
         case 'resume': return void window.pdm.invoke('resume', t.id);
         case 'restart': return void window.pdm.invoke('restart', t.id);
-        case 'remove': return void window.pdm.invoke('remove', { id: t.id, deleteFile: false });
+        case 'remove':
+          state.tasks.delete(t.id);
+          removeCardEl(t.id);
+          render();
+          window.pdm.invoke('remove', { id: t.id, deleteFile: false });
+          return;
         case 'removeFile':
           if (window.confirm(window.t('ctx.confirmDeleteFile'))) {
+            state.tasks.delete(t.id);
+            removeCardEl(t.id);
+            render();
             window.pdm.invoke('remove', { id: t.id, deleteFile: true });
           }
           return;
         case 'vcancel': return void window.pdm.invoke('video:cancel', { id: t.id });
-        case 'vremove': return void window.pdm.invoke('video:remove', { id: t.id });
+        case 'vremove':
+          state.tasks.delete(t.id);
+          removeCardEl(t.id);
+          render();
+          window.pdm.invoke('video:remove', { id: t.id, deleteFile: false });
+          return;
+        case 'vremoveFile':
+          if (window.confirm(window.t('ctx.confirmDeleteFile'))) {
+            state.tasks.delete(t.id);
+            removeCardEl(t.id);
+            render();
+            window.pdm.invoke('video:remove', { id: t.id, deleteFile: true });
+          }
+          return;
         case 'tcancel': return void window.pdm.invoke('torrent:cancel', { id: t.id });
-        case 'tremove': return void window.pdm.invoke('torrent:remove', { id: t.id });
+        case 'tremove':
+          state.tasks.delete(t.id);
+          removeCardEl(t.id);
+          render();
+          window.pdm.invoke('torrent:remove', { id: t.id, deleteFile: false });
+          return;
+        case 'tremoveFile':
+          if (window.confirm(window.t('ctx.confirmDeleteFile'))) {
+            state.tasks.delete(t.id);
+            removeCardEl(t.id);
+            render();
+            window.pdm.invoke('torrent:remove', { id: t.id, deleteFile: true });
+          }
+          return;
       }
     } else if (id.startsWith('app:')) {
       switch (id.slice(4)) {
@@ -1021,6 +1072,11 @@ async function handleContextAction(id) {
     toast('⚠️ ' + (err.message || err), 'err');
   }
 }
+function removeCardEl(id) {
+  const el = document.querySelector(`.task[data-id="${id}"]`);
+  if (el) el.remove();
+}
+
 /* ===== ربط قوائم كليك يمين ===== */
 function wireContextMenus() {
   // قائمة المهام: كليك يمين على بطاقة تحميل
@@ -1043,6 +1099,8 @@ function wireContextMenus() {
       if (t.status === 'downloading') {
         items.push({ id: isTorrent ? 'task:tcancel' : 'task:vcancel', icon: '✕', label: window.t('act.vcancel') });
       }
+      items.push({ id: isTorrent ? 'task:tremove' : 'task:vremove', icon: '🗑️', label: window.t('ctx.removeTask') });
+      items.push({ id: isTorrent ? 'task:tremoveFile' : 'task:vremoveFile', icon: '💥', label: window.t('ctx.removeWithFile') });
     } else {
       if (['downloading', 'queued'].includes(t.status)) items.push({ id: 'task:pause', icon: '⏸', label: window.t('act.pause') });
       if (['paused', 'failed', 'canceled'].includes(t.status)) items.push({ id: 'task:resume', icon: '▶', label: window.t('act.resume') });
@@ -1088,8 +1146,18 @@ function wireIpc() {
     if (!data) return;
     if (data.type === 'tasks') {
       let structural = false;
+      // القائمة الكاملة: مزامنة الحذف (مهام محذوفة من النواة تُزال من الواجهة)
+      if (data.full) {
+        const allIds = new Set(data.tasks.map(t => t.id));
+        for (const id of [...state.tasks.keys()]) {
+          const k = state.tasks.get(id).kind;
+          if (k === undefined && !allIds.has(id)) { state.tasks.delete(id); structural = true; }
+        }
+      }
       for (const t of data.tasks) {
         const prev = state.tasks.get(t.id);
+        // تجاهل التحديثات التفاضلية لمهام غير معروفة (أحداث قديمة بعد الحذف)
+        if (!prev && !data.full) continue;
         state.tasks.set(t.id, t);
         // أثناء التحميل: تحديث متزايد للبطاقة فقط (بدون إعادة بناء القائمة)
         if (prev && prev.status === t.status && t.status === 'downloading' && state.view === 'tasks') {

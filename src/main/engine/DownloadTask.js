@@ -403,6 +403,16 @@ class DownloadTask extends EventEmitter {
     }
   }
 
+  /* إيقاف كامل مع انتظار تحرير مقبض الملف (ضروري قبل حذف الملف على ويندوز) */
+  async ensureStopped(timeoutMs = 5000) {
+    this.pause();
+    const t0 = Date.now();
+    while ((this.fd || this._controllers.size) && Date.now() - t0 < timeoutMs) {
+      await new Promise(r => setTimeout(r, 60));
+    }
+    await this._closeFd();
+  }
+
   pause() {
     this.paused = true;
     this.aborted = true;

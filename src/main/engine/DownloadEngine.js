@@ -231,11 +231,11 @@ class DownloadEngine extends EventEmitter {
     if (t) { t.cancel(false); this._emitAll(); }
   }
 
-  removeTask(payload) {
+  async removeTask(payload) {
     const { id, deleteFile } = payload || {};
     const t = this.tasks.get(id);
     if (!t) return;
-    if (['downloading', 'queued'].includes(t.status)) t.pause();
+    if (['downloading', 'queued'].includes(t.status)) await t.ensureStopped();
     if (deleteFile && t.filePath && fs.existsSync(t.filePath)) {
       try { fs.unlinkSync(t.filePath); } catch (_e) {}
     }
@@ -245,25 +245,23 @@ class DownloadEngine extends EventEmitter {
     this._emitAll();
   }
 
-  restart(id) {
+  async restart(id) {
     const t = this.tasks.get(id);
     if (!t) return;
-    t.pause();
-    setTimeout(() => {
-      t.segments = [];
-      t.received = 0;
-      t._fileReady = false;
-      t.error = null;
-      t._retries = 0;
-      if (t.filePath && fs.existsSync(t.filePath)) {
-        try { fs.unlinkSync(t.filePath); } catch (_e) {}
-      }
-      t.status = 'queued';
-      this.db.clearResumeState(id);
-      this.queue.push(id);
-      this._processQueue();
-      this._emitAll();
-    }, 300);
+    if (['downloading', 'queued'].includes(t.status)) await t.ensureStopped();
+    t.segments = [];
+    t.received = 0;
+    t._fileReady = false;
+    t.error = null;
+    t._retries = 0;
+    if (t.filePath && fs.existsSync(t.filePath)) {
+      try { fs.unlinkSync(t.filePath); } catch (_e) {}
+    }
+    t.status = 'queued';
+    this.db.clearResumeState(id);
+    this.queue.push(id);
+    this._processQueue();
+    this._emitAll();
   }
 
   clearCompleted() {
