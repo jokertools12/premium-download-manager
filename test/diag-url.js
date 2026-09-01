@@ -36,5 +36,15 @@ async function probe(useReferer, useRange) {
   console.log('B) بدون Referer، مع Range:', JSON.stringify(await probe(false, true)));
   console.log('C) مع Referer، مع Range:', JSON.stringify(await probe(true, true)));
   console.log('D) مع Referer، بدون Range:', JSON.stringify(await probe(true, false)));
+  // E) Referer تلقائي من نفس نطاق الرابط (الحل الآلي المقترح)
+  {
+    const o = new URL(url);
+    const autoRef = o.origin + '/';
+    const headers = { 'user-agent': UA, referer: autoRef, range: 'bytes=0-0' };
+    const res = await fetch(url, { headers });
+    const infoE = { status: res.status, range: res.headers.get('content-range'), autoRef };
+    if (res.body) { try { await res.body.cancel(); } catch (_e) {} }
+    console.log('E) Referer تلقائي من نطاق الرابط:', JSON.stringify(infoE));
+  }
   process.exit(0);
 })().catch(e => { console.error('DIAG-FAIL:', e.message); process.exit(1); });

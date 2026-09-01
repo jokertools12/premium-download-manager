@@ -25,6 +25,7 @@ class DownloadTask extends EventEmitter {
     this.mirrors = Array.isArray(opts.mirrors) ? opts.mirrors.filter(Boolean) : [];
     this._mirrorIdx = 0;        // 0 = الرابط الأساسي، 1..n = البدائل
     this._needsReprobe = false; // بعد التبديل لمصدر بديل
+    this._autoRefererTried = false;
     this.status = opts.status || 'queued';
     this.size = opts.size || null;
     this.received = opts.received || 0;
@@ -182,20 +183,31 @@ class DownloadTask extends EventEmitter {
   }
 
   _currentUrl() {
-    if (!this.mirrors.length || this._mirrorIdx === 0) return this.url;
-    return this.mirrors[(this._mirrorIdx - 1) % this.mirrors.length];
+    const cands = [this.url, ...this.mirrors];
+    return cands[Math.min(this._mirrorIdx, cands.length - 1)];
   }
 
   async _probe() {
-    // جرّب المصدر الحالي ثم دوّر على البدائل عند الفشل
-    const total = this.mirrors.length + 1;
+    /* جرّب كل مصدر بالترتيب، وعند 403 (حماية hotlink) جرّب تلقائياً
+       مصدر إحالة مشتقاً من نطاق الرابط نفسه — بدون أي إدخال من المستخدم */
+    const candidates = [this.url, ...this.mirrors];
     let lastErr = null;
-    for (let attempt = 0; attempt < total; attempt++) {
+    for (let i = 0; i < candidates.length; i++) {
       try {
-        return await this._probeUrl(this._currentUrl());
+        const info = await this._probeUrl(candidates[i]);
+        this._mirrorIdx = i;
+        return info;
       } catch (err) {
         lastErr = err;
-        if (this.mirrors.length) this._mirrorIdx = (this._mirrorIdx + 1) % total;
+        if (/HTTP 403/.test(err.message) && !this.headers.referer && !this._autoRefererTried) {
+          this._autoRefererTried = true;
+          try { this.headers.referer = new URL(candidates[i]).origin + '/'; } catch (_e) {}
+          try {
+            const info = await this._probeUrl(candidates[i]);
+            this._mirrorIdx = i;
+            return info;
+          } catch (e2) { lastErr = e2; }
+        }
       }
     }
     throw lastErr;
