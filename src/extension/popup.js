@@ -2,7 +2,7 @@
 
 /* نافذة الإضافة المنبثقة: إعدادات + آخر الالتقاطات + حالة البرنامج */
 
-const DEFAULTS = { enabled: true, minSizeMB: 1, ignoredSites: [] };
+const DEFAULTS = { enabled: true, minSizeMB: 0, ignoredSites: [] };
 
 const $ = s => document.querySelector(s);
 
@@ -27,16 +27,24 @@ chrome.storage.sync.get(DEFAULTS, s => {
 chrome.storage.local.get({ recent: [] }, d => renderRecent(d.recent));
 $('#ver').textContent = 'v' + chrome.runtime.getManifest().version;
 
-// حالة البرنامج (via native messaging ping)
-(async () => {
+// حالة البرنامج: نجرّب Native Messaging ثم الاتصال المباشر بخادم البرنامج
+async function checkAppRunning() {
   try {
     const res = await chrome.runtime.sendNativeMessage('com.premiumdm.host', { ping: true });
-    $('#appStatus').innerHTML = res && res.running
-      ? '<span class="on">● البرنامج يعمل الآن</span>'
-      : '<span class="off">● البرنامج غير متصل — سيُستخدم المتصفح للتحميل</span>';
-  } catch (_e) {
-    $('#appStatus').innerHTML = '<span class="off">● تعذر الاتصال بالبرنامج (ثبّت الإضافة من إعدادات البرنامج)</span>';
-  }
+    if (res && res.running) return true;
+  } catch (_e) { /* نحاول المسار الثاني */ }
+  try {
+    const r = await fetch('http://127.0.0.1:45762/ping');
+    const d = await r.json().catch(() => ({}));
+    return !!(d && d.ok);
+  } catch (_e) { return false; }
+}
+
+(async () => {
+  const running = await checkAppRunning();
+  $('#appStatus').innerHTML = running
+    ? '<span class="on">● البرنامج يعمل الآن — التحميلات ستُحوَّل إليه</span>'
+    : '<span class="off">● البرنامج غير متصل — شغّل Premium DM أولاً</span>';
 })();
 
 $('#enabled').addEventListener('change', e => {

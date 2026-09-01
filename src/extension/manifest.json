@@ -3,6 +3,7 @@
   "name": "Premium Download Manager Integration",
   "version": "2.0.0",
   "description": "يحوّل التحميلات من المتصفح إلى Premium Download Manager — مع إعدادات وقائمة كليك يمين",
+  "host_permissions": ["http://127.0.0.1:45762/*"],
   "permissions": ["downloads", "nativeMessaging", "storage", "contextMenus"],
   "background": { "service_worker": "background.js" },
   "action": {

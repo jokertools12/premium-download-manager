@@ -7,7 +7,7 @@
    - شارة إشعار على الأيقونة عند الالتقاط */
 
 const HOST = 'com.premiumdm.host';
-const DEFAULTS = { enabled: true, minSizeMB: 1, ignoredSites: [] };
+const DEFAULTS = { enabled: true, minSizeMB: 0, ignoredSites: [] };
 let settings = { ...DEFAULTS };
 
 /* ===== الإعدادات ===== */
@@ -32,11 +32,22 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'تحميل الوسائط مع Premium DM',
     contexts: ['video', 'audio']
   });
+  chrome.contextMenus.create({
+    id: 'pdm-download-page-video',
+    title: '🎬 تحميل فيديو هذه الصفحة مع Premium DM',
+    contexts: ['page']
+  });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   const url = info.linkUrl || info.srcUrl || info.pageUrl;
-  if (url) sendToApp({
+  if (!url) return;
+  if (info.menuItemId === 'pdm-download-page-video') {
+    // إرسال الصفحة لمستخرج الفيديوهات (yt-dlp) لأفضل جودة
+    sendToApp({ url, referrer: tab && tab.url, force: true, video: true });
+    return;
+  }
+  sendToApp({
     url,
     referrer: tab && tab.url,
     force: true // القائمة تتجاوز فلاتر الحجم
@@ -59,13 +70,31 @@ function badge(text) {
   } catch (_e) {}
 }
 
+/* إرسال مباشر عبر HTTP إلى الخادم المحلي للبرنامج (بديل موثوق حتى لو
+   لم يُسجّل مضيف Native Messaging في السجل) — يعمل دائماً ما دام البرنامج يعمل */
+async function httpSend(msg) {
+  try {
+    const res = await fetch('http://127.0.0.1:45762/add', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(msg)
+    });
+    if (!res.ok) return false;
+    const d = await res.json().catch(() => ({}));
+    return !!(d && d.ok);
+  } catch (_e) { return false; }
+}
+
 async function sendToApp(msg) {
   let ok = false;
   try {
     await chrome.runtime.sendNativeMessage(HOST, msg);
     ok = true;
   } catch (_e) {
-    // البرنامج غير مثبت/غير مسجل — المتصفح يكمل تحميله طبيعياً
+    // Native Messaging غير مسجل — نجرّب الاتصال المباشر بخادم البرنامج
+  }
+  if (!ok) {
+    try { ok = await httpSend(msg); } catch (_e) { ok = false; }
   }
   if (ok) {
     badge('✓');

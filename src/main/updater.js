@@ -37,14 +37,23 @@ class Updater {
     autoUpdater.on('update-not-available', info => this._set({ status: 'none', version: info.version }));
     autoUpdater.on('download-progress', p => this._set({ status: 'downloading', percent: Math.round(p.percent || 0) }));
     autoUpdater.on('update-downloaded', info => this._set({ status: 'downloaded', version: info.version }));
-    autoUpdater.on('error', e => {
-      this._set({ status: 'error', error: String((e && e.message) || e).slice(0, 200) });
-    });
+    autoUpdater.on('error', e => this._onError(e));
   }
 
   _set(patch) {
     this.state = { ...this.state, ...patch };
     if (this.send) this.send({ type: 'update', update: { ...this.state, currentVersion: this.appVersion } });
+  }
+
+  /* "لا منشورات بعد على GitHub" ليس خطأ — يعني ببساطة لم يُنشر إصدار بعد.
+     نعرضه كحالة 'none' (لا يوجد تحديث) بدلاً من شريط خطأ مخيف للمستخدم. */
+  _onError(e) {
+    const msg = String((e && e.message) || e);
+    if (/no published versions?|not published|no versions? (found|available)/i.test(msg)) {
+      this._set({ status: 'none', error: null });
+      return;
+    }
+    this._set({ status: 'error', error: msg.slice(0, 200) });
   }
 
   /* فحص دوري تلقائي — يعمل في النسخة المثبتة فقط */
@@ -65,7 +74,7 @@ class Updater {
     try {
       await autoUpdater.checkForUpdates();
     } catch (e) {
-      this._set({ status: 'error', error: String((e && e.message) || e).slice(0, 200) });
+      this._onError(e);
     }
     return { ...this.state, currentVersion: this.appVersion };
   }

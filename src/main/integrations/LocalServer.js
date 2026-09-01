@@ -16,6 +16,11 @@ class LocalServer {
   start() {
     return new Promise((resolve, reject) => {
       this.server = http.createServer((req, res) => {
+        // ترويسات CORS: تسمح لإضافة المتصفح بالتواصل المباشر عبر HTTP (MV3)
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'content-type');
+        if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
         if (req.method === 'POST' && req.url === '/add') {
           let body = '';
           req.on('data', c => { body += c; if (body.length > 1024 * 512) req.destroy(); });
@@ -27,8 +32,8 @@ class LocalServer {
               if (/^https?:\/\//i.test(url)) {
                 const headers = {};
                 if (msg.referrer) headers.referer = msg.referrer;
-                if (this.video && this.video.isStreamUrl(url)) {
-                  // بث HLS/M3U8: يوجه لمسار الفيديو بأفضل جودة
+                if (this.video && (msg.video || this.video.isStreamUrl(url))) {
+                  // فيديو (كليك يمين في المتصفح) أو بث HLS/M3U8: يوجه لمستخرج الفيديوهات بأفضل جودة
                   this.video.autoDownload(url, this.videoDir());
                 } else {
                   this.engine.addTask({
