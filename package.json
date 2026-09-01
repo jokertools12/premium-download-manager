@@ -29,7 +29,10 @@
       {
         "from": "src/extension",
         "to": "extension",
-        "filter": ["**/*", "!install.bat"]
+        "filter": [
+          "**/*",
+          "!install.bat"
+        ]
       }
     ],
     "asarUnpack": [
