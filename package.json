@@ -13,7 +13,7 @@
   },
   "publish": {
     "provider": "github",
-    "owner": "YOUR-GITHUB-USERNAME",
+    "owner": "jokertools12",
     "repo": "premium-download-manager"
   },
   "build": {
