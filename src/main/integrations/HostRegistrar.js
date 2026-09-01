@@ -31,7 +31,15 @@ class HostRegistrar {
   }
 
   _hostPath() {
-    if (this.isPackaged) return this.exePath; // البرنامج نفسه هو المضيف (وضع --native-host)
+    if (this.isPackaged) {
+      // النسخة المثبتة: ننشئ جسراً (bat) يشغّل البرنامج نفسه بوضع --native-host
+      // حتى يقرأ stdin ويرد على المتصفح بدل فتح النافذة العادية.
+      const bat = path.join(this.manifestDir(), 'pdm-host.bat');
+      try {
+        fs.writeFileSync(bat, `@echo off\r\n""${this.exePath}"" --native-host\r\n`, 'utf8');
+      } catch (_e) { /* تجاهل */ }
+      return bat;
+    }
     return path.join(this.extensionDir, 'native-host.bat');
   }
 
@@ -52,6 +60,8 @@ class HostRegistrar {
     if (!BROWSERS[browser]) throw new Error('متصفح غير معروف: ' + browser);
     const dir = this.manifestDir();
     await fsp.mkdir(dir, { recursive: true });
+    // ننشئ الجسر (pdm-host.bat) أولاً إن كنا في النسخة المثبتة — حتى يبقى محدّثاً دائماً
+    if (this.isPackaged) this._hostPath();
     const file = path.join(dir, `${browser}-host.json`);
     await fsp.writeFile(file, this._manifestContent(browser), 'utf8');
     const r = spawnSync('reg', ['add', BROWSERS[browser].key, '/ve', '/t', 'REG_SZ', '/d', file, '/f'], { windowsHide: true });

@@ -70,15 +70,19 @@ function badge(text) {
   } catch (_e) {}
 }
 
-/* إرسال مباشر عبر HTTP إلى الخادم المحلي للبرنامج (بديل موثوق حتى لو
-   لم يُسجّل مضيف Native Messaging في السجل) — يعمل دائماً ما دام البرنامج يعمل */
+/* إرسال مباشر عبر HTTP أولاً (لا يفتح نافذة جديدة ولا يسبب أثراً جانبياً)
+   ثم Native Messaging كاحتياط (يشغّل البرنامج ويعيد البث) */
 async function httpSend(msg) {
   try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 1500);
     const res = await fetch('http://127.0.0.1:45762/add', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(msg)
+      body: JSON.stringify(msg),
+      signal: ctl.signal
     });
+    clearTimeout(t);
     if (!res.ok) return false;
     const d = await res.json().catch(() => ({}));
     return !!(d && d.ok);
@@ -87,14 +91,14 @@ async function httpSend(msg) {
 
 async function sendToApp(msg) {
   let ok = false;
-  try {
-    await chrome.runtime.sendNativeMessage(HOST, msg);
-    ok = true;
-  } catch (_e) {
-    // Native Messaging غير مسجل — نجرّب الاتصال المباشر بخادم البرنامج
-  }
+  // 1) HTTP مباشر — أسرع وأضمن ما دام البرنامج يعمل (ولا يفتح نافذة زائدة)
+  try { ok = await httpSend(msg); } catch (_e) { ok = false; }
+  // 2) Native Messaging احتياط — يشغّل البرنامج إن كان مغلقاً (وضع --native-host)
   if (!ok) {
-    try { ok = await httpSend(msg); } catch (_e) { ok = false; }
+    try {
+      await chrome.runtime.sendNativeMessage(HOST, msg);
+      ok = true;
+    } catch (_e) { ok = false; }
   }
   if (ok) {
     badge('✓');
@@ -106,6 +110,25 @@ async function sendToApp(msg) {
     badge('!');
   }
   return ok;
+}
+
+/* إلغاء تحميل المتصفح بشكل قوي: نوقف ثم نلغي، مع إعادة محاولة
+   حتى يتأكد أن الملف لن يُحفظ عبر المتصفح */
+function cancelBrowserDownload(itemId, maxTries = 4) {
+  let tries = 0;
+  const attempt = () => {
+    tries++;
+    try {
+      chrome.downloads.pause(itemId, () => {
+        chrome.downloads.cancel(itemId, () => {
+          const lastErr = chrome.runtime.lastError ? chrome.runtime.lastError.message : '';
+          // إن كان التحميل اكتمل قبل الإلغاء فلا بأس (أُرسل للبرنامج أصلاً)
+          if (lastErr && tries < maxTries) setTimeout(attempt, 250);
+        });
+      });
+    } catch (_e) { /* تجاهل */ }
+  };
+  attempt();
 }
 
 chrome.downloads.onCreated.addListener(async item => {
@@ -127,9 +150,10 @@ chrome.downloads.onCreated.addListener(async item => {
     size: item.totalBytes > 0 ? item.totalBytes : undefined
   };
 
-  // نحاول الإرسال أولاً؛ فقط إذا نجح نلغي تحميل المتصفح
+  // نرسل أولاً؛ عند النجاح نلغي تحميل المتصفح بقوة
   const ok = await sendToApp(msg);
-  if (ok && item.state && item.state !== 'interrupted' && !item.paused) {
-    try { chrome.downloads.cancel(item.id, () => {}); } catch (_e) {}
+  if (ok) {
+    cancelBrowserDownload(item.id);
+    // ملاحظة: أيضاً نوقف أي إتمام لاحق عبر onChanged لما نبحث عن item.id
   }
 });

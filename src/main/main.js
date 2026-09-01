@@ -226,8 +226,10 @@ if (HOST_MODE) {
       isPackaged: app.isPackaged,
       extensionDir
     });
-    if (app.isPackaged && !db.getSettings().hostsRegistered) {
-      host.autoRegisterDefaults(); // Chrome + Edge تلقائياً
+    if (app.isPackaged) {
+      // أعد تسجيل Chrome و Edge دائماً لتحديث الجسر (pdm-host.bat) وملفات المضيف
+      // — مهم بعد الترقية من v1.0.0 كي يعمل وضع --native-host الصحيح.
+      host.autoRegisterDefaults();
       db.updateSettings({ hostsRegistered: true });
     }
 
