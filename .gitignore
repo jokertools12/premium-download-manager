@@ -2,6 +2,8 @@
 node_modules/
 dist/
 dist2/
+build-out/
+build/out/
 
 # ملفات السجل والمؤقتة
 *.log
