@@ -32,12 +32,17 @@
         "filter": ["**/*", "!install.bat"]
       }
     ],
+    "asarUnpack": [
+      "node_modules/webtorrent/**"
+    ],
     "win": {
       "target": [
         "nsis"
       ],
       "artifactName": "PremiumDM-Setup-${version}.${ext}"
     },
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -45,11 +50,11 @@
     }
   },
   "devDependencies": {
+    "better-sqlite3": "^13.0.3",
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "electron-updater": "^6.8.9",
     "webtorrent": "^3.0.21"
   }
