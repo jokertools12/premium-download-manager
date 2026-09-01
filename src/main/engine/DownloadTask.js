@@ -293,28 +293,52 @@ class DownloadTask extends EventEmitter {
         redirect: 'follow'
       });
       if (res.status === 416) { seg.done = true; return; }
-      if (headers.range && res.status === 200) {
-        if (this.segments.length > 1) throw new Error('ERR_NO_RANGE');
-        this.received -= seg.received;
-        seg.received = 0;
-      }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       if (!res.body) throw new Error('لا توجد بيانات من الخادم');
+
+      /* الخادم تجاهل النطاق وأرسل الملف كاملاً (200)؟
+         لا نعيد التحميل من الصفر — نقرأ التدفق كاملاً ونتخطى البايتات
+         قبل بداية الجزء، ونكتب حتى نهايته (Skip-Ahead الاحترافي) */
+      let skipBytes = 0;
+      if (headers.range && res.status === 200) {
+        skipBytes = seg.start + seg.received;
+        const ctype = (res.headers.get('content-type') || '').toLowerCase();
+        if (ctype.includes('text/html')) throw new Error('ERR_RANGE_HTML');
+      }
+
+      const segLen = (seg.end === null || seg.end === undefined)
+        ? Infinity
+        : (seg.end - seg.start + 1);
+      let written = seg.received; // بايتات الجزء المكتوبة فعلياً
+
       for await (const chunk of res.body) {
         if (this.aborted) throw new Error('aborted');
-        if (this.limiter) await this.limiter.take(chunk.length, this);
-        // كتابة كاملة مع معالجة الكتابات الجزئية
-        let toWrite = chunk;
-        let pos = seg.start + seg.received;
+        let data = chunk;
+        if (skipBytes > 0) {
+          if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
+          data = data.subarray(skipBytes);
+          skipBytes = 0;
+        }
+        if (segLen !== Infinity && written + data.length > segLen) {
+          data = data.subarray(0, segLen - written);
+        }
+        if (!data.length) continue;
+        if (this.limiter) await this.limiter.take(data.length, this);
+        let pos = seg.start + written;
+        let toWrite = data;
         while (toWrite.length) {
           const w = await this.fd.write(toWrite, 0, toWrite.length, pos);
           if (!w.bytesWritten) throw new Error('فشل كتابة البيانات على القرص');
           pos += w.bytesWritten;
           toWrite = toWrite.subarray(w.bytesWritten);
         }
-        seg.received += chunk.length;
-        this.received += chunk.length;
+        written += data.length;
+        seg.received = written;
+        this.received = this.segments.reduce((a, s) => a + s.received, 0);
       }
+
+      if (segLen !== Infinity && written < segLen) throw new Error('انقطع اتصال الجزء قبل اكتماله');
+      seg.received = (segLen === Infinity) ? written : written;
       seg.done = true;
     } finally {
       this._controllers.delete(controller);
@@ -333,22 +357,8 @@ class DownloadTask extends EventEmitter {
     if (/HTTP 403/.test(msg)) {
       msg = 'HTTP 403 — الرابط محمي (يتطلب مصدر إحالة Referer). أضف حقل Referer عند الإضافة أو استخدم الإضافة من المتصفح';
     }
-    // تراجع تلقائي: الخادم رفض التجزئة → اتصال واحد
-    if (msg.includes('ERR_NO_RANGE') && this.supportsRanges) {
-      this.supportsRanges = false;
-      this.segments = this.size
-        ? [{ start: 0, end: this.size - 1, received: 0, done: false }]
-        : [{ start: 0, end: null, received: 0, done: false }];
-      this.received = 0;
-      this._retries = 0;
-      this._fileReady = false;
-      this._last = { t: Date.now(), b: 0 };
-      this.status = 'queued';
-      this._emit();
-      setTimeout(() => {
-        if (!this.paused && !this.aborted && this.status === 'queued') this._resumeInternal();
-      }, 800);
-      return;
+    if (msg.includes('ERR_RANGE_HTML')) {
+      msg = 'الخادم أعاد صفحة خطأ بدل الملف — قد يكون الرابط منتهياً أو محمياً';
     }
     if (this._retries < MAX_RETRIES && msg !== 'aborted') {
       this._retries += 1;
