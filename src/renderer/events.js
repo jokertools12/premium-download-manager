@@ -56,6 +56,9 @@ export function wireIpc() {
       syncKindTasks(data.torrents || [], 'torrent', data.summary);
     } else if (data.type === 'update') {
       handleUpdateEvent(data.update);
+    } else if (data.type === 'extracted') {
+      // فك الأرشيف التلقائي (2.3)
+      toast(data.ok ? window.t('extract.done') : window.t('extract.failed'), data.ok ? 'ok' : 'err');
     } else if (data.type === 'win') {
       $('#btnMax').textContent = data.maximized ? '❐' : '□';
     }

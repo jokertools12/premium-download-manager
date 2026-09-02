@@ -91,6 +91,9 @@
       <label class="fld"><span data-i18n="add.referer">مصدر الإحالة Referer (اختياري — لبعض المواقع المحمية)</span>
         <input id="addReferer" type="text" dir="ltr" placeholder="https://cimanowtv.com/">
       </label>
+      <label class="fld"><span data-i18n="add.checksum">المجموع الاختباري (اختياري)</span>
+        <input id="addChecksum" type="text" dir="ltr" data-i18n-ph="add.checksumPh" placeholder="sha256:abc123… أو md5:abc123…">
+      </label>
       <label class="fld"><span data-i18n="add.folder">مجلد الحفظ</span>
         <div class="row"><input id="addDir" type="text" dir="ltr"><button id="btnBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
       </label>
@@ -213,6 +216,10 @@
           </label>
         </div>
         <label class="chk"><input id="stOrganize" type="checkbox"> <span data-i18n="set.organize">ترتيب الملفات تلقائياً في مجلدات حسب النوع</span></label>
+        <label class="chk"><input id="stAutoExtract" type="checkbox"> <span data-i18n="set.autoExtract">فك الأرشيف تلقائياً بعد اكتمال التحميل (ZIP/RAR/7z)</span></label>
+        <label class="fld"><span data-i18n="set.nameTemplate">قالب تسمية الملفات الجديدة</span>
+          <input id="stNameTemplate" type="text" dir="ltr" data-i18n-ph="set.nameTemplateHint" placeholder="{date}_{site}_{name}.{ext}">
+        </label>
         <label class="chk"><input id="stClipboard" type="checkbox"> <span data-i18n="set.clipboard">مراقبة الحافظة واقتراح الروابط المنسوخة</span></label>
         <label class="chk"><input id="stAutoFloat" type="checkbox"> <span data-i18n="set.autoFloat">إظهار النافذة العائمة تلقائياً أثناء التحميل</span></label>
         <label class="fld"><span data-i18n="set.maxSpeed">تحديد السرعة القصوى للتحميل (0 = بلا حدود)</span>

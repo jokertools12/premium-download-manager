@@ -9,6 +9,7 @@ import { openVideoModal } from './video.js';
 export async function openAdd(url) {
   $('#addUrl').value = url || '';
   $('#addName').value = '';
+  $('#addChecksum').value = '';
   $('#addDir').value = (state.settings && state.settings.downloadDir) || '';
   openModal('addModal');
   if (!url) $('#addUrl').focus();
@@ -32,6 +33,8 @@ export async function openSettings() {
   $('#stOrganize').checked = !!s.organizeByCategory;
   $('#stClipboard').checked = !!s.clipboardMonitor;
   $('#stAutoFloat').checked = !!s.autoFloat;
+  $('#stAutoExtract').checked = !!s.autoExtract;
+  $('#stNameTemplate').value = s.nameTemplate || '';
   $('#stLang').value = s.language || 'ar';
   $('#stTheme').value = s.theme || 'dark';
   $('#stSched').checked = !!(s.scheduler && s.scheduler.enabled);
@@ -61,6 +64,8 @@ export async function saveSettings() {
     organizeByCategory: $('#stOrganize').checked,
     clipboardMonitor: $('#stClipboard').checked,
     autoFloat: $('#stAutoFloat').checked,
+    autoExtract: $('#stAutoExtract').checked,
+    nameTemplate: $('#stNameTemplate').value.trim(),
     theme: $('#stTheme').value,
     language: $('#stLang').value,
     scheduler: {
@@ -194,6 +199,7 @@ export function wireModals() {
         filename: $('#addName').value.trim() || undefined,
         dir: $('#addDir').value.trim() || undefined,
         referer: $('#addReferer').value.trim() || undefined,
+        checksum: $('#addChecksum').value.trim() || undefined,
         mirrors: $('#addMirrors').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
       });
       closeModal('addModal');

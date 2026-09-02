@@ -224,6 +224,11 @@ if (HOST_MODE) {
       applyAutoFloat();
     });
 
+    /* فك الأرشيف التلقائي (2.3): بث النتيجة كإشعار في الواجهة */
+    engine.on('extracted', (info) => {
+      if (win && !win.isDestroyed()) win.webContents.send('pdm:event', { type: 'extracted', ...info });
+    });
+
     // مدير الفيديوهات (yt-dlp)
     video = new VideoManager(path.join(app.getPath('userData'), 'bin'));
     video.on('updated', () => {

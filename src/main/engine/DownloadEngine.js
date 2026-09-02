@@ -6,6 +6,9 @@ const fs = require('fs');
 const path = require('path');
 const DownloadTask = require('./DownloadTask');
 const SpeedLimiter = require('./SpeedLimiter');
+const { FtpTask, isFtpUrl } = require('../protocols/ftp');
+const { normalizeChecksum } = require('./checksum');
+const { extractArchive } = require('./extract');
 
 const CATEGORY_EXTS = {
   video: ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v', 'mpg', 'mpeg', '3gp', 'ts', 'vob'],
@@ -60,15 +63,18 @@ class DownloadEngine extends EventEmitter {
   }
 
   _create(rec) {
-    const t = new DownloadTask({ ...rec, maxConnections: this.settings.maxConnections, limiter: this.limiter });
+    const opts = { ...rec, maxConnections: this.settings.maxConnections, limiter: this.limiter };
+    /* توجيه حسب البروتوكول: FTP/FTPS عبر وحدة protocols/ftp (2.4) */
+    const t = isFtpUrl(rec.url) ? new FtpTask(opts) : new DownloadTask(opts);
     t.on('updated', () => this._onUpdated(t));
     this.tasks.set(t.id, t);
     return t;
   }
 
-  addTask({ url, filename, dir, headers, mirrors, referer } = {}) {
+  addTask({ url, filename, dir, headers, mirrors, referer, checksum } = {}) {
     url = String(url || '').trim();
-    if (!/^https?:\/\//i.test(url)) throw new Error('رابط غير صالح');
+    // HTTP/S + FTP/FTPS (2.4)
+    if (!/^(https?|ftps?):\/\//i.test(url)) throw new Error('رابط غير صالح');
     for (const t of this.tasks.values()) {
       if (t.url === url && ['queued', 'downloading', 'paused'].includes(t.status)) {
         return { existed: true, task: t.snapshot() };
@@ -98,6 +104,8 @@ class DownloadEngine extends EventEmitter {
     const id = crypto.randomUUID();
     const t = this._create({
       id, url, filename: fname, dir: d, category, headers: allHeaders, mirrors: altMirrors,
+      checksum: normalizeChecksum(checksum),
+      nameTemplate: String(this.settings.nameTemplate || ''),
       status: 'queued', createdAt: Date.now()
     });
     this.db.upsertTask(t.snapshot());
@@ -114,7 +122,7 @@ class DownloadEngine extends EventEmitter {
     for (const raw of urls) {
       const url = String(raw || '').trim();
       if (!url) continue;
-      if (!/^https?:\/\//i.test(url)) { invalid++; continue; }
+      if (!/^(https?|ftps?):\/\//i.test(url)) { invalid++; continue; }
       if (seen.has(url)) { existed++; continue; }
       seen.add(url);
       try {
@@ -132,6 +140,15 @@ class DownloadEngine extends EventEmitter {
       if (this.stats) this.stats.observe(t.snapshot());
     }
     if (t.status === 'completed' && this.stats) this.stats.onCompleted(t.id);
+    /* فك الأرشيف تلقائياً (2.3) — بعد الاكتمال إذا فعّل المستخدم الخيار */
+    if (t.status === 'completed' && this.settings.autoExtract && t.filePath && !t._extractDone) {
+      t._extractDone = true;
+      extractArchive(t.filePath)
+        .then(r => {
+          if (r) this.emit('extracted', { ok: !!r.ok, filePath: t.filePath, dest: r.dest, files: r.files, reason: r.reason });
+        })
+        .catch(() => {});
+    }
     if (['completed', 'failed', 'canceled'].includes(t.status)) this.db.clearResumeState(t.id);
     if (['completed', 'failed', 'canceled', 'paused'].includes(t.status)) this._processQueue();
     this.emit('updated', t.snapshot());

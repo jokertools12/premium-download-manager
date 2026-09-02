@@ -23,7 +23,7 @@
  */
 const RENDERER_COMMANDS = {
   /* --- التحكم بالمهام --- */
-  'add':            { desc: 'إضافة رابط تحميل جديد', args: ['url', 'filename?', 'headers?', 'mirrors?', 'category?'] },
+  'add':            { desc: 'إضافة رابط تحميل جديد (HTTP/S أو FTP/FTPS)', args: ['url', 'filename?', 'headers?', 'mirrors?', 'category?', 'referer?', 'checksum? ("sha256:..." | "md5:...")'] },
   'pause':          { desc: 'إيقاف مهمة مؤقتاً', args: ['id'] },
   'resume':         { desc: 'استئناف مهمة', args: ['id'] },
   'cancel':         { desc: 'إلغاء مهمة (مع خيار حذف الملف)', args: ['id', 'deleteFile?'] },

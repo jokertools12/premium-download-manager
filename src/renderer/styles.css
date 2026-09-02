@@ -203,6 +203,7 @@ button { font-family: inherit; }
   font-size: 11px; padding: 2px 9px; border-radius: 12px; font-weight: 600;
 }
 .badge.downloading { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.badge.verifying { color: #9b7fff; background: color-mix(in srgb, #9b7fff 15%, transparent); }
 .badge.completed { color: var(--green); background: color-mix(in srgb, var(--green) 15%, transparent); }
 .badge.paused, .badge.queued { color: var(--amber); background: color-mix(in srgb, var(--amber) 15%, transparent); }
 .badge.failed, .badge.canceled { color: var(--red); background: color-mix(in srgb, var(--red) 15%, transparent); }

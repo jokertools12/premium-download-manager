@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   maxConnections: 16,
   maxSpeedKB: 0,
   organizeByCategory: true,
+  autoExtract: false,
+  nameTemplate: '',
   theme: 'dark',
   clipboardMonitor: true,
   autoFloat: false,
