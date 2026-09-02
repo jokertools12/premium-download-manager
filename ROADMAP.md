@@ -49,7 +49,7 @@
 |---|---|---|---|
 | 1.1 | ✅ **اختبارات آلية** | Vitest + خادم HTTP محلي حقيقي: segments/resume/mirrors/403/filename | منجز |
 | 1.2 | ✅ **CI/CD على GitHub Actions** | `.github/workflows/ci.yml`: lint+test عند push، بناء exe ونشره عند tag | منجز |
-| 1.3 | ⏳ **تفكيك `app.js`** | تقسيمه لوحدات — مؤجل لبعد استقرار الاختبارات (الأساس الأول) | متبقٍ |
+| 1.3 | ✅ **تفكيك `app.js`** | 14 وحدة ES Modules (state + lib/{format,dom} + ui/*9 + events) + بروتوكول `app://` (وحدات ESM تفشل عبر file:// مع مسافات في المسار) + فحص دخان `test/renderer-smoke.js` | منجز |
 | 1.4 | ✅ **أمان `innerHTML`** | `sanitize.js` (escapeHtml/escapeAttr/escapeUrl) + تطبيق على النقاط الخطرة | منجز |
 | 1.5 | ✅ **توثيق IPC** | `src/main/ipc-map.js` مرجع مركزي موثّق JSDoc | منجز |
 | 1.6 | ✅ **ESLint + Prettier** | flat config + `.prettierrc` + فحص في CI | منجز |

@@ -1,7 +1,13 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, screen, protocol } = require('electron');
 const path = require('path');
+const fs = require('fs');
+
+/* مخطط app:// يجب تسجيله قبل جاهزية التطبيق — انظر protocol.handle في whenReady */
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+]);
 const { buildPng } = require('./icon');
 const Database = require('./db/database');
 const { DownloadEngine } = require('./engine/DownloadEngine');
@@ -127,7 +133,7 @@ function createWindow() {
       nodeIntegration: false
     }
   });
-  win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  win.loadURL('app://local/index.html');
   win.once('ready-to-show', () => showWindow());
   win.on('maximize', () => send({ type: 'win', maximized: true }));
   win.on('unmaximize', () => send({ type: 'win', maximized: false }));
@@ -174,6 +180,30 @@ if (HOST_MODE) {
   });
 
   app.whenReady().then(() => {
+    /* بروتوكول app:// لخدمة ملفات الواجهة: ضروري لأن وحدات ES Modules
+       تفشل عبر file:// عندما يحتوي مسار التثبيت على مسافات (مثل "downloader manager") */
+    const RENDERER_ROOT = path.join(__dirname, '..', 'renderer');
+    const MIME = {
+      '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
+      '.css': 'text/css', '.json': 'application/json', '.png': 'image/png',
+      '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+      '.woff': 'font/woff', '.woff2': 'font/woff2', '.map': 'application/json'
+    };
+    protocol.handle('app', (req) => {
+      try {
+        const u = new URL(req.url);
+        if (u.host !== 'local') return new Response('not found', { status: 404 });
+        const rel = path.normalize(decodeURIComponent(u.pathname)).replace(/^([\\/])+/, '');
+        const fp = path.join(RENDERER_ROOT, rel);
+        if (!fp.startsWith(RENDERER_ROOT)) return new Response('forbidden', { status: 403 });
+        const data = fs.readFileSync(fp);
+        return new Response(data, {
+          headers: { 'content-type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream' }
+        });
+      } catch (err) {
+        return new Response('not found', { status: 404 });
+      }
+    });
     db = new Database();
     const stats = new Statistics(db);
     engine = new DownloadEngine(db, stats);

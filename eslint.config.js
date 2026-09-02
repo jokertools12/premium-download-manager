@@ -6,6 +6,7 @@ const NODE_GLOBALS = {
   require: 'writable', module: 'writable', exports: 'writable', __dirname: 'readonly', __filename: 'readonly',
   process: 'readonly', console: 'readonly', Buffer: 'readonly', global: 'readonly',
   fetch: 'readonly', URL: 'readonly', URLSearchParams: 'readonly', AbortController: 'readonly',
+  Response: 'readonly', Request: 'readonly', Headers: 'readonly',
   WebSocket: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly',
   setTimeout: 'readonly', clearTimeout: 'readonly', setInterval: 'readonly', clearInterval: 'readonly',
   setImmediate: 'readonly', queueMicrotask: 'readonly', structuredClone: 'readonly', crypto: 'readonly'
@@ -64,12 +65,22 @@ module.exports = [
     },
     rules: RULES
   },
-  /* الـ renderer (نصوص داخل الصفحة) */
+  /* الـ renderer — وحدات ES Modules (app.js ونقاط الاستيراد) */
   {
     files: ['src/renderer/**/*.js'],
     languageOptions: {
+      sourceType: 'module',
+      globals: { ...BROWSER_GLOBALS }
+    },
+    rules: RULES
+  },
+  /* سكربتات كلاسيكية داخل الصفحة (تُحمَّل بوسم <script> عادي وتعرّف globals)
+     module/exports للتوافق مع التصدير في Node أثناء الاختبارات */
+  {
+    files: ['src/renderer/lib/sanitize.js', 'src/renderer/i18n.js', 'src/renderer/float.js'],
+    languageOptions: {
       sourceType: 'script',
-      globals: { ...BROWSER_GLOBALS, module: 'writable', exports: 'writable', require: 'readonly', process: 'readonly' }
+      globals: { ...BROWSER_GLOBALS, module: 'writable', exports: 'writable' }
     },
     rules: RULES
   },
