@@ -540,3 +540,18 @@ body.compact .task .t-meta { font-size: 10px; }
 body.compact .bar { height: 3px; }
 body.compact #list { gap: 4px; }
 body.compact .side-item { padding: 4px 10px; }
+
+/* Site Grabber (5.3) */
+.grab-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; margin-bottom: 10px; }
+.grab-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); cursor: pointer; }
+.grab-row:hover { border-color: var(--accent); }
+.grab-row .grab-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+  text-align: left;
+  font-size: 12px;
+}

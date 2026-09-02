@@ -4,11 +4,12 @@ const http = require('http');
 
 // خادم محلي يستقبل الروابط من إضافة المتصفح عبر Native Messaging
 class LocalServer {
-  constructor({ port, engine, video, videoDir, onFocus }) {
+  constructor({ port, engine, video, videoDir, version, onFocus }) {
     this.port = port;
     this.engine = engine;
     this.video = video || null;
     this.videoDir = videoDir || (() => engine.settings.downloadDir);
+    this.version = version || '';
     this.onFocus = onFocus || (() => {});
     this.server = null;
   }
@@ -51,7 +52,17 @@ class LocalServer {
           });
         } else if (req.url === '/ping') {
           res.writeHead(200, { 'content-type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: '1.0.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '1.5.0' }));
+        } else if (req.url === '/status') {
+          /* API للمطورين (5.7): نظرة عامة على الحالة بدون مصادقة (محلي 127.0.0.1 فقط) */
+          let summary = { speed: 0, downloading: 0, queued: 0, paused: 0, completed: 0, failed: 0, total: 0 };
+          try { summary = { ...summary, ...this.engine.summary() }; } catch (_e) {}
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({
+            ok: true, running: true, app: 'PremiumDM',
+            version: this.version || '1.5.0',
+            summary
+          }));
         } else {
           res.writeHead(404);
           res.end();

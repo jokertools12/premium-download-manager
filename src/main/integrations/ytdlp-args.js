@@ -60,6 +60,9 @@ function buildYtDlpArgs(task) {
     args.push('--write-subs', '--write-auto-subs', '--sub-langs', task.subsLangs || DEFAULT_SUBS);
   }
 
+  /* تسجيل دخول المواقع (5.2): قراءة كوكيز المتصفح مباشرة */
+  if (task.cookiesFrom) args.push('--cookies-from-browser', task.cookiesFrom);
+
   /* قص المقطع (4.5) — فيديو مفرد فقط، والنهاية يجب أن تتجاوز البداية */
   if (hasClip) args.push('--download-sections', `*${t0}-${t1}`);
 

@@ -1,6 +1,6 @@
 {
   "name": "premium-download-manager",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Premium Download Manager - أسرع وأنيق مثل IDM وأكثر",
   "main": "src/main/main.js",
   "author": "PremiumDM",
@@ -43,9 +43,17 @@
     ],
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "zip",
+        "portable"
       ],
       "artifactName": "PremiumDM-Setup-${version}.${ext}"
+    },
+    "zip": {
+      "artifactName": "PremiumDM-Portable-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "PremiumDM-PortableSingle-${version}.${ext}"
     },
     "npmRebuild": false,
     "nodeGypRebuild": false,

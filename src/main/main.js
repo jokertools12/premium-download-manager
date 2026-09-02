@@ -18,6 +18,7 @@ const LocalServer = require('./integrations/LocalServer');
 const VideoManager = require('./integrations/VideoManager');
 const TorrentManager = require('./integrations/TorrentManager');
 const Updater = require('./updater');
+const { parseCliArgs } = require('./cli');
 const { setupIpc } = require('./ipc');
 const { HostRegistrar } = require('./integrations/HostRegistrar');
 
@@ -171,11 +172,40 @@ if (HOST_MODE) {
 } else if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', (_e, argv) => {
-    const url = (argv || []).find(a => /^https?:\/\//i.test(a));
-    if (url) {
-      try { engine.addTask({ url }); } catch (_e) {}
+  /* النظام البيئي (5.5): تسجيل مخطط pdm://add?url=... */
+  try {
+    if (process.defaultApp && process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient('pdm', process.execPath, [path.resolve(process.argv[1])]);
+    } else {
+      app.setAsDefaultProtocolClient('pdm');
     }
+  } catch (_e) { /* قد يكون مسجلاً مسبقاً */ }
+
+  /* توجيه رابط وارد (من CLI أو pdm:// أو مثيل ثانٍ) — بث HLS يتوجه للفيديو */
+  function handleIncomingUrl(url) {
+    try {
+      if (!/^https?:\/\//i.test(String(url || ''))) return false;
+      if (video && video.isStreamUrl(url)) {
+        video.autoDownload(url, path.join(
+          engine.settings.downloadDir,
+          (engine.settings.categoryDirs || {}).video || 'Videos'
+        ));
+      } else if (engine) {
+        engine.addTask({ url });
+      } else {
+        return false;
+      }
+      showWindow();
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  app.on('second-instance', (_e, argv) => {
+    /* النظام البيئي (5.5): add <url> | <url> مباشرة | pdm://add?url=... */
+    const r = parseCliArgs(argv);
+    if (r.cmd === 'add' && r.url) handleIncomingUrl(r.url);
     showWindow();
   });
 
@@ -317,10 +347,15 @@ if (HOST_MODE) {
       port: 45762,
       engine,
       video,
+      version: app.getVersion(),
       videoDir: () => path.join(engine.settings.downloadDir, (engine.settings.categoryDirs || {}).video || 'Videos'),
       onFocus: showWindow
     });
     server.start().catch(() => {});
+
+    /* النظام البيئي (5.5): روابط وردت مع أول تشغيل (CLI أو pdm://) */
+    const incoming = parseCliArgs(process.argv);
+    if (incoming.cmd === 'add' && incoming.url) handleIncomingUrl(incoming.url);
 
     // عيّنات السرعة (آخر 60 ثانية) للرسم البياني الحي في لوحة الإحصائيات
     const speedHist = [];

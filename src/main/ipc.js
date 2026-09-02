@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const { ipcMain, dialog, shell } = require('electron');
+const { scanPage } = require('./integrations/grabber');
 
 function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatApi, showMain }) {
   ipcMain.handle('pdm', async (_e, cmd, payload) => {
@@ -58,6 +59,58 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
       case 'removeHistory':
         db.removeHistory((payload || {}).id);
         return true;
+      /* Site Grabber (5.3) */
+      case 'grab:scan':
+        return scanPage(String((payload || {}).url || ''));
+      /* مزامنة البيانات (5.4) */
+      case 'exportData': {
+        const sv = await dialog.showSaveDialog(win, {
+          defaultPath: `PremiumDM-backup-${new Date().toISOString().slice(0, 10)}.json`,
+          filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (sv.canceled || !sv.filePath) return null;
+        const data = {
+          app: 'PremiumDM', schema: 1, exportedAt: new Date().toISOString(),
+          settings: db.getSettings(),
+          tasks: db.getTasks(),
+          history: db.getHistory(),
+          stats: db.getStatsData()
+        };
+        fs.writeFileSync(sv.filePath, JSON.stringify(data, null, 2), 'utf8');
+        return { path: sv.filePath };
+      }
+      case 'importData': {
+        const op = await dialog.showOpenDialog(win, {
+          properties: ['openFile'],
+          filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (op.canceled || !op.filePaths.length) return null;
+        const raw = JSON.parse(fs.readFileSync(op.filePaths[0], 'utf8'));
+        if (raw.app !== 'PremiumDM' || typeof raw !== 'object') {
+          throw new Error('ملف نسخة احتياطية غير صالح');
+        }
+        if (raw.settings && typeof raw.settings === 'object') db.updateSettings(raw.settings);
+        let imported = 0;
+        if (Array.isArray(raw.tasks)) {
+          for (const t of raw.tasks) {
+            if (t && t.id && t.url) {
+              db.upsertTask({ ...t, status: t.status === 'downloading' ? 'paused' : (t.status || 'paused') });
+              imported++;
+            }
+          }
+        }
+        if (Array.isArray(raw.history)) {
+          for (const h of raw.history) if (h && h.url) db.addHistory(h);
+        }
+        if (raw.stats && typeof raw.stats === 'object') {
+          for (const [k, v] of Object.entries(raw.stats)) {
+            if (v && (v.bytes || v.files)) db.addStats(k, v);
+          }
+        }
+        engine.applySettings(db.getSettings());
+        engine.reloadFromDb();
+        return { imported };
+      }
       case 'float:dropUrl': {
         // سحب رابط إلى النافذة العائمة (3.7): افتح الرئيسية واقترح الرابط
         const url = String((payload || {}).url || '');

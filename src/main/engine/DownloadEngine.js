@@ -302,6 +302,17 @@ class DownloadEngine extends EventEmitter {
     this._emitAll();
   }
 
+  /* استيراد مهام من قاعدة البيانات (5.4) — أنشئ ما هو غير موجود في الذاكرة */
+  reloadFromDb() {
+    const known = new Set([...this.tasks.keys()]);
+    for (const rec of this.db.getTasks()) {
+      if (!rec || !rec.id || known.has(rec.id)) continue;
+      const t = this._create(rec);
+      if (t.status === 'downloading' || t.status === 'queued') t.status = 'paused';
+    }
+    this._emitAll();
+  }
+
   applySettings(s) {
     this.settings = s;
     this.limiter.setRate((s.maxSpeedKB || 0) * 1024);

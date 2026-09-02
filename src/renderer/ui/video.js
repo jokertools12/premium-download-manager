@@ -21,6 +21,7 @@ export function openVideoModal(url) {
   $('#vidFormatsWrap').hidden = true;
   $('#vidEntriesWrap').hidden = true;
   $('#vidClipWrap').hidden = true;
+  $('#vidCookies').value = '';
   $('#btnVidAll').hidden = true;
   $('#btnVideoDownload').hidden = false;
   $('#btnVideoDownload').textContent = window.t('video.start');
@@ -93,7 +94,8 @@ export async function startVideoDownload(allEntries) {
     subtitles: $('#vidSubs').checked,
     mergeOutput: $('#vidMerge').value,
     clipStart: $('#vidClipStart').value.trim(),
-    clipEnd: $('#vidClipEnd').value.trim()
+    clipEnd: $('#vidClipEnd').value.trim(),
+    cookiesFrom: $('#vidCookies').value || null
   };
   try {
     let payload;

@@ -47,6 +47,7 @@
         <button id="btnAdd" class="btn primary" data-i18n="toolbar.add">＋ رابط جديد</button>
         <button id="btnVideo" class="btn ghost" data-i18n="toolbar.video" data-i18n-title="toolbar.videoTitle">🎬 فيديو</button>
         <button id="btnTorrent" class="btn ghost" data-i18n="toolbar.torrent" data-i18n-title="toolbar.torrentTitle">🧲 تورنت</button>
+        <button id="btnGrab" class="btn ghost" data-i18n="toolbar.grab" data-i18n-title="toolbar.grabTitle">🌐 فحص صفحة</button>
         <input id="search" type="text" data-i18n-ph="toolbar.searchPh" placeholder="🔍 ابحث في التحميلات...">
         <select id="sortKey" data-i18n-title="sort.title">
           <option value="createdAt" data-i18n="sort.date">الأحدث</option>
@@ -203,6 +204,17 @@
             </select>
           </label>
         </div>
+        <div class="row">
+          <label class="fld"><span data-i18n="video.cookies">🔒 تسجيل الدخول من متصفح (للمحتوى المحمي)</span>
+            <select id="vidCookies">
+              <option value="" data-i18n="video.cookiesNone">بدون</option>
+              <option value="chrome">Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="firefox">Firefox</option>
+              <option value="brave">Brave</option>
+            </select>
+          </label>
+        </div>
         <div class="row" id="vidClipWrap" hidden>
           <span class="hint" data-i18n="video.clip">✂️ قص مقطع:</span>
           <label class="fld"><span data-i18n="video.clipFrom">من</span>
@@ -314,6 +326,11 @@
           <button id="btnCheckUpdate" class="btn ghost" data-i18n="update.check">🔄 التحقق من التحديثات</button>
           <span id="updVersion" class="hint"></span>
         </div>
+        <div class="side-title" data-i18n="data.title">🗄️ البيانات والنسخ الاحتياطي (5.4)</div>
+        <div class="row">
+          <button id="btnExportData" class="btn ghost" data-i18n="data.export">📤 تصدير نسخة JSON</button>
+          <button id="btnImportData" class="btn ghost" data-i18n="data.import">📥 استيراد نسخة</button>
+        </div>
         <div class="side-title" data-i18n="ext.title">🌐 إضافة المتصفح</div>
         <div id="extRows"></div>
         <div class="row">
@@ -325,6 +342,30 @@
       <div class="modal-foot">
         <button class="btn ghost" data-close="settingsModal" data-i18n="set.cancel">إلغاء</button>
         <button id="btnSaveSettings" class="btn primary" data-i18n="set.save">حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة Site Grabber (5.3) -->
+  <div id="grabModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 data-i18n="grab.title">🌐 فحص صفحة — Site Grabber</h3><button class="modal-x" data-close="grabModal">✕</button></div>
+      <div class="row" style="margin-bottom:12px;">
+        <input id="grabUrl" type="text" dir="ltr" data-i18n-ph="grab.urlPh" placeholder="https://example.com/gallery" style="flex:1">
+        <button id="btnGrabScan" class="btn primary" data-i18n="grab.scan">🔍 فحص</button>
+      </div>
+      <div id="grabStatus" class="hint" data-i18n="grab.hint">أدخل رابط صفحة لفحص صورها وفيديوهاتها وملفاتها</div>
+      <div id="grabResults" hidden>
+        <div class="side-title" data-i18n="grab.videos">🎬 فيديوهات</div>
+        <div id="grabVideos" class="grab-list"></div>
+        <div class="side-title" data-i18n="grab.images">🖼️ صور</div>
+        <div id="grabImages" class="grab-list"></div>
+        <div class="side-title" data-i18n="grab.files">📦 ملفات</div>
+        <div id="grabFiles" class="grab-list"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="grabModal" data-i18n="grab.close">إغلاق</button>
+        <button id="btnGrabDownload" class="btn primary" hidden data-i18n="grab.download">⬇ تحميل المحدد</button>
       </div>
     </div>
   </div>

@@ -222,6 +222,28 @@ export function wireModals() {
   $('#btnSaveSettings').onclick = saveSettings;
   $('#btnOpenRules').onclick = openRules;
 
+  // مزامنة البيانات (5.4)
+  $('#btnExportData').onclick = async () => {
+    try {
+      const r = await window.pdm.invoke('exportData');
+      if (r && r.path) toast(window.t('data.exported', { p: r.path }), 'ok');
+    } catch (err) {
+      toast('⚠️ ' + (err.message || err), 'err');
+    }
+  };
+  $('#btnImportData').onclick = async () => {
+    try {
+      const r = await window.pdm.invoke('importData');
+      if (r) {
+        applyTheme(state.settings.theme, state.settings.accentColor, state.settings.density);
+        render();
+        toast(window.t('data.imported', { n: r.imported }), 'ok');
+      }
+    } catch (err) {
+      toast('⚠️ ' + (err.message || err), 'err');
+    }
+  };
+
   // نافذة القواعد
   $('#btnAddRule').onclick = () => { state.rulesDraft.push({ pattern: '', folder: '' }); renderRules(); };
   $('#btnSaveRules').onclick = saveRules;

@@ -13,6 +13,7 @@ import { openVideoModal } from './ui/video.js';
 import { openTorrentModal } from './ui/torrent.js';
 import { openPreview } from './ui/preview.js';
 import { findHistory } from './ui/history.js';
+import { openGrabber, scanGrab, grabDownloadSelected } from './ui/grabber.js';
 
 /* ===== أحداث النواة ===== */
 export function wireIpc() {
@@ -125,6 +126,10 @@ export function wireMainUI() {
   $('#btnRules').onclick = openRules;
   $('#btnVideo').onclick = () => openVideoModal('');
   $('#btnTorrent').onclick = openTorrentModal;
+  $('#btnGrab').onclick = () => openGrabber('');
+  $('#btnGrabScan').onclick = scanGrab;
+  $('#grabUrl').addEventListener('keydown', e => { if (e.key === 'Enter') scanGrab(); });
+  $('#btnGrabDownload').onclick = grabDownloadSelected;
   $('#btnSettings').onclick = openSettings;
 
   // القائمة الجانبية

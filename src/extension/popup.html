@@ -36,6 +36,19 @@
     .status { padding: 6px 12px; font-size: 11px; }
     .on { color: #34d399; } .off { color: #f87171; }
     .del { background: none; border: none; color: #f87171; cursor: pointer; margin-inline-start: 6px; }
+    .stream {
+      padding: 5px 8px; border-radius: 7px; background: #111726;
+      margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
+    }
+    .stream .surl {
+      flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      direction: ltr; text-align: left; color: #a9b7d9; font-size: 11px;
+    }
+    .stream button {
+      background: #1d2a4a; color: #7fb2ff; border: 1px solid #2c3d6b;
+      border-radius: 6px; cursor: pointer; font-size: 11px; padding: 3px 8px; flex-shrink: 0;
+    }
+    .stream button:hover { border-color: #4f8cff; }
   </style>
 </head>
 <body>
@@ -63,6 +76,11 @@
   <div class="sec">
     <div class="hint" style="margin-bottom:5px">آخر ما تم التقاطه:</div>
     <div class="recent" id="recent"><div class="hint">لا شيء بعد</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="hint" style="margin-bottom:5px">📺 بث HLS/DASH مكتشف في هذا التبويب:</div>
+    <div class="recent" id="streams"><div class="hint">افتح صفحة فيها بث مباشر وستظهر روابطه هنا</div></div>
   </div>
 
   <div class="sec status" id="appStatus">…</div>

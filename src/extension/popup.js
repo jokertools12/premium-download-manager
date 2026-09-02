@@ -73,3 +73,32 @@ $('#sites').addEventListener('click', e => {
     renderSites(sites);
   });
 });
+
+/* ===== (5.1) بث HLS/DASH المكتشف في التبويب النشط ===== */
+function renderStreams(streams) {
+  const el = $('#streams');
+  if (!streams || !streams.length) return;
+  el.innerHTML = streams.map(s => `
+    <div class="stream">
+      <span class="surl" title="${s.url}">${s.url}</span>
+      <button data-surl="${s.url}" title="تحميل هذا البث">⬇</button>
+    </div>`).join('');
+}
+
+chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+  const tabId = tabs && tabs[0] ? tabs[0].id : null;
+  if (tabId == null) return;
+  chrome.runtime.sendMessage({ type: 'getHls', tabId }, res => {
+    if (res && res.ok) renderStreams(res.streams);
+  });
+});
+
+$('#streams').addEventListener('click', e => {
+  const b = e.target.closest('button[data-surl]');
+  if (!b) return;
+  const url = b.dataset.surl;
+  chrome.runtime.sendMessage(
+    { type: 'send', payload: { url, video: true, force: true } },
+    () => b.textContent = '✓'
+  );
+});

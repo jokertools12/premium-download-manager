@@ -284,7 +284,8 @@ class VideoManager extends EventEmitter {
 
   /* ===== بدء تحميل فيديو / قائمة تشغيل ===== */
   async start({ url, formatId, dir, title, playlist, items,
-                audioOnly, subtitles, subsLangs, clipStart, clipEnd, mergeOutput }) {
+                audioOnly, subtitles, subsLangs, clipStart, clipEnd, mergeOutput,
+                cookiesFrom }) {
     const id = 'vid-' + crypto.randomUUID();
     const task = {
       id, kind: 'video', category: 'video', url,
@@ -301,6 +302,7 @@ class VideoManager extends EventEmitter {
       clipStart: clipStart || null,
       clipEnd: clipEnd || null,
       mergeOutput: mergeOutput || null,
+      cookiesFrom: cookiesFrom || null,
       status: 'downloading', received: 0, size: null, speed: 0, percent: null,
       error: null, createdAt: Date.now(), completedAt: null, phase: 'تهيئة...'
     };

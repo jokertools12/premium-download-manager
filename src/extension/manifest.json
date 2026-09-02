@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Premium Download Manager Integration",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "يحوّل التحميلات من المتصفح إلى Premium Download Manager — يمنع التحميل في المتصفح ويحوّله للبرنامج فوراً",
   "host_permissions": ["http://127.0.0.1:45762/*", "<all_urls>"],
-  "permissions": ["downloads", "nativeMessaging", "storage", "contextMenus", "webRequest", "webRequestBlocking"],
+  "permissions": ["downloads", "nativeMessaging", "storage", "contextMenus", "webRequest", "webRequestBlocking", "tabs"],
   "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",

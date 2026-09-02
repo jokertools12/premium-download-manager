@@ -127,6 +127,46 @@ chrome.webRequest.onBeforeRequest.addListener(details => {
   return { cancel: true }; // المتصفح لا يبدأ أي تحميل إطلاقاً
 }, { urls: ['<all_urls>'] }, ['blocking']);
 
+/* ===== (5.1) إضافة v2: التقاط روابط البث HLS/DASH لكل تبويب ===== */
+const STREAM_URL_RE = /\.m3u8($|[?#])|\.mpd($|[?#])/i;
+const streamHits = new Map(); // tabId -> Map(url -> { url, tabUrl, time })
+
+chrome.webRequest.onBeforeRequest.addListener(details => {
+  if (!STREAM_URL_RE.test(details.url)) return {};
+  if (details.tabId < 0) return {};
+  if (!streamHits.has(details.tabId)) streamHits.set(details.tabId, new Map());
+  const m = streamHits.get(details.tabId);
+  if (!m.has(details.url)) m.set(details.url, { url: details.url, tabUrl: '', time: Date.now() });
+  // حافظ على آخر 30 رابطاً لكل تبويب فقط
+  while (m.size > 30) {
+    const oldest = [...m.keys()].sort((a, b) => m.get(a).time - m.get(b).time)[0];
+    m.delete(oldest);
+  }
+  return {};
+}, { urls: ['<all_urls>'] }, []);
+
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.url && streamHits.has(tabId)) {
+    for (const v of streamHits.get(tabId).values()) v.tabUrl = info.url;
+  }
+});
+chrome.tabs.onRemoved.addListener(tabId => streamHits.delete(tabId));
+
+/* جسر الـ popup: قائمة البث + إرسال للبرنامج */
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.type === 'getHls') {
+    const tabId = msg.tabId;
+    const list = streamHits.has(tabId) ? [...streamHits.get(tabId).values()].slice(-20) : [];
+    sendResponse({ ok: true, streams: list });
+    return;
+  }
+  if (msg.type === 'send') {
+    sendToApp(msg.payload || {}).then(ok => sendResponse({ ok }));
+    return true; // استجابة غير متزامنة
+  }
+});
+
 /* ===== (2) احتياط: أي تحميل يبدأ فعلاً نلغيه فوراً (بدون أي انتظار شبكة) ===== */
 chrome.downloads.onCreated.addListener(item => {
   if (!item || !item.url) return;
