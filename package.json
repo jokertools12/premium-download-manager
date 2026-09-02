@@ -1,6 +1,6 @@
 {
   "name": "premium-download-manager",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "description": "Premium Download Manager - أسرع وأنيق مثل IDM وأكثر",
   "main": "src/main/main.js",
   "author": "PremiumDM",
@@ -48,6 +48,23 @@
         "portable"
       ],
       "artifactName": "PremiumDM-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities",
+      "artifactName": "PremiumDM-${version}-mac.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "maintainer": "PremiumDM <jokertools12@users.noreply.github.com>",
+      "artifactName": "PremiumDM-${version}-linux.${ext}"
     },
     "npmRebuild": false,
     "nodeGypRebuild": false,

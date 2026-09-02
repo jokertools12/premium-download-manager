@@ -4,7 +4,7 @@ const fs = require('fs');
 const { ipcMain, dialog, shell } = require('electron');
 const { scanPage } = require('./integrations/grabber');
 
-function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatApi, showMain }) {
+function setupIpc({ getWindow, db, engine, video, torrent, updater, host, plugins, floatApi, showMain }) {
   ipcMain.handle('pdm', async (_e, cmd, payload) => {
     const win = getWindow();
     switch (cmd) {
@@ -59,6 +59,14 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
       case 'removeHistory':
         db.removeHistory((payload || {}).id);
         return true;
+      /* نظام الإضافات (6.5) */
+      case 'plugins:list':
+        return plugins ? plugins.list() : [];
+      case 'plugins:toggle':
+        if (!plugins) throw new Error('الإضافات غير متاحة');
+        return (payload || {}).enabled
+          ? plugins.enable((payload || {}).id)
+          : plugins.disable((payload || {}).id);
       /* Site Grabber (5.3) */
       case 'grab:scan':
         return scanPage(String((payload || {}).url || ''));

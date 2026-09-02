@@ -116,6 +116,12 @@ const STR = {
   'data.import': ['📥 استيراد نسخة', '📥 Import backup', '📥 Yedeği içe aktar'],
   'data.exported': ['تم التصدير إلى: {p}', 'Exported to: {p}', 'Dışa aktarıldı: {p}'],
   'data.imported': ['تم الاستيراد — {n} مهمة', 'Imported — {n} tasks', 'İçe aktarıldı — {n} görev'],
+  /* v2.0: الانطلاقة الكبرى */
+  'plug.title': ['🧩 المكوّنات الإضافية (6.5)', '🧩 Plugins (6.5)', '🧩 Eklentiler (6.5)'],
+  'plug.hint': ['ضع ملفات .js في مجلد plugins داخل مجلد بيانات البرنامج — راجع docs/PLUGINS.md', 'Put .js files in the plugins folder inside the app data directory — see docs/PLUGINS.md', '.js dosyalarını uygulama veri klasöründeki plugins klasörüne koyun — docs/PLUGINS.md'],
+  'plug.on': ['مفعّلة', 'On', 'Açık'],
+  'plug.off': ['متوقفة', 'Off', 'Kapalı'],
+  'plug.none': ['لا توجد إضافات مثبتة', 'No plugins installed', 'Yüklü eklenti yok'],
   'empty.title': ['لا توجد تحميلات هنا', 'No downloads here', 'Burada indirme yok'],
   'empty.sub': ['أضف رابطاً جديداً أو انسخ رابطاً إلى الحافظة، أو اسحب رابطاً وأفلته هنا', 'Add a new URL, copy a link to clipboard, or drag & drop a link here', 'Yeni bağlantı ekleyin, panoya kopyalayın veya bir bağlantıyı sürükleyip bırakın'],
   'add.title': ['تحميل جديد', 'New Download', 'Yeni İndirme'],

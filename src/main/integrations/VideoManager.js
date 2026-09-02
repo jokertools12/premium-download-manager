@@ -7,9 +7,7 @@ const fsp = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
 const { buildYtDlpArgs } = require('./ytdlp-args');
-
-const YT_DLP_URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
-const FFMPEG_URL = 'https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip';
+const { binaries, needsChmod } = require('../platforms');
 
 const once = (em, ev) => new Promise(r => em.once(ev, r));
 
@@ -20,12 +18,15 @@ function fmtSize(n) {
   return (i ? v.toFixed(1) : v) + ' ' + u[i];
 }
 
-/* مدير تحميل الفيديوهات: يعتمد yt-dlp (تنزيل تلقائي) و ffmpeg (تنزيل تلقائي عند الحاجة للدمج) */
+/* مدير تحميل الفيديوهات: يعتمد yt-dlp (تنزيل تلقائي) و ffmpeg (تنزيل تلقائي عند الحاجة للدمج)
+   متعدد المنصات (6.1): win32 / darwin / linux عبر platforms.js */
 class VideoManager extends EventEmitter {
   constructor(binDir) {
     super();
     this.binDir = binDir;
-    this.ytDlpPath = path.join(binDir, 'yt-dlp.exe');
+    const bins = binaries(process.platform, process.arch);
+    this.ytDlpPath = path.join(binDir, bins.ytDlp.file);
+    this._bins = bins;
     this.tasks = new Map();
     this._ensuringYtDlp = null;
     this._ensuringFfmpeg = null;
@@ -35,7 +36,7 @@ class VideoManager extends EventEmitter {
   hasYtDlp() { return fs.existsSync(this.ytDlpPath); }
 
   ffmpegDir() {
-    return fs.existsSync(path.join(this.binDir, 'ffmpeg.exe')) ? this.binDir : null;
+    return fs.existsSync(path.join(this.binDir, this._bins.ffmpeg.file)) ? this.binDir : null;
   }
 
   totalSpeed() {
@@ -85,13 +86,16 @@ class VideoManager extends EventEmitter {
 
   _emit(t) { this.emit('updated', t); }
 
-  /* ===== تنزيل الأدوات ===== */
+  /* ===== تنزيل الأدوات (6.1: متعدد المنصات) ===== */
   async ensureYtDlp(onProgress) {
     if (this.hasYtDlp()) return true;
     if (this._ensuringYtDlp) return this._ensuringYtDlp;
     this._ensuringYtDlp = (async () => {
       await fsp.mkdir(this.binDir, { recursive: true });
-      await this._downloadFile(YT_DLP_URL, this.ytDlpPath, onProgress);
+      await this._downloadFile(this._bins.ytDlp.url, this.ytDlpPath, onProgress);
+      if (needsChmod(process.platform)) {
+        try { await fsp.chmod(this.ytDlpPath, 0o755); } catch (_e) {}
+      }
       return true;
     })();
     try { return await this._ensuringYtDlp; }
@@ -103,24 +107,12 @@ class VideoManager extends EventEmitter {
     if (this._ensuringFfmpeg) return this._ensuringFfmpeg;
     this._ensuringFfmpeg = (async () => {
       await fsp.mkdir(this.binDir, { recursive: true });
-      const zipPath = path.join(this.binDir, 'ffmpeg.zip');
-      const tmpDir = path.join(this.binDir, 'ffmpeg-tmp');
-      await this._downloadFile(FFMPEG_URL, zipPath, onProgress);
-      // فك الضغط عبر PowerShell (متوفر في ويندوز افتراضياً)
-      await new Promise((resolve, reject) => {
-        const p = spawn('powershell.exe', ['-NoProfile', '-Command',
-          `Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${tmpDir}' -Force`], { windowsHide: true });
-        p.on('exit', code => code === 0 ? resolve() : reject(new Error('فشل فك ضغط ffmpeg (كود ' + code + ')')));
-        p.on('error', reject);
-      });
-      const found = await this._findFile(tmpDir, 'ffmpeg.exe');
-      if (!found) throw new Error('ffmpeg.exe غير موجود داخل الملف المضغوط');
-      await fsp.copyFile(found, path.join(this.binDir, 'ffmpeg.exe'));
-      try {
-        const ff2 = await this._findFile(tmpDir, 'ffprobe.exe');
-        if (ff2) await fsp.copyFile(ff2, path.join(this.binDir, 'ffprobe.exe'));
-      } catch (_e) { /* اختياري */ }
-      try { await fsp.unlink(zipPath); await fsp.rm(tmpDir, { recursive: true, force: true }); } catch (_e) {}
+      const dest = path.join(this.binDir, this._bins.ffmpeg.file);
+      /* ثنائي ffmpeg مفرد (ffmpeg-static) — بلا أرشيف ولا PowerShell */
+      await this._downloadFile(this._bins.ffmpeg.url, dest, onProgress);
+      if (needsChmod(process.platform)) {
+        try { await fsp.chmod(dest, 0o755); } catch (_e) {}
+      }
       return this.binDir;
     })();
     try { return await this._ensuringFfmpeg; }
@@ -439,7 +431,12 @@ class VideoManager extends EventEmitter {
     t.status = 'canceled';
     t.speed = 0;
     if (t._proc) {
-      try { spawn('taskkill', ['/pid', String(t._proc.pid), '/T', '/F'], { windowsHide: true }); } catch (_e) {}
+      /* 6.1: taskkill لقتل شجرة العمليات على ويندوز، إشارة SIGKILL على الأنظمة الأخرى */
+      if (process.platform === 'win32') {
+        try { spawn('taskkill', ['/pid', String(t._proc.pid), '/T', '/F'], { windowsHide: true }); } catch (_e) {}
+      } else {
+        try { t._proc.kill('SIGKILL'); } catch (_e) {}
+      }
       t._proc = null;
     }
     this._emit(t);

@@ -51,7 +51,8 @@ export function grabDownloadSelected() {
   const urls = [...document.querySelectorAll('#grabResults input:checked')].map(el => el.dataset.gurl);
   if (!urls.length) { toast(window.t('import.empty'), 'err'); return; }
   const s = state.settings || {};
-  const vidDir = String(s.downloadDir || '').replace(/[\\/]+$/, '') + '\\Videos';
+  const sep = (window.pdm && window.pdm.platform === 'win32') ? '\\' : '/';
+  const vidDir = String(s.downloadDir || '').replace(/[\\/]+$/, '') + sep + 'Videos';
   let queued = 0;
   for (const u of urls) {
     try {

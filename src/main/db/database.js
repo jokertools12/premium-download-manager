@@ -4,10 +4,24 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const APP_DIR = path.join(
-  process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
-  'PremiumDownloadManager'
-);
+/* مجلد بيانات التطبيق حسب المنصة (6.1: ويندوز / ماك / لينكس) */
+function resolveAppDir() {
+  if (process.platform === 'win32') {
+    return path.join(
+      process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+      'PremiumDownloadManager'
+    );
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support', 'PremiumDownloadManager');
+  }
+  return path.join(
+    process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'),
+    'PremiumDownloadManager'
+  );
+}
+
+const APP_DIR = resolveAppDir();
 
 const DEFAULT_SETTINGS = {
   downloadDir: path.join(os.homedir(), 'Downloads', 'PremiumDM'),

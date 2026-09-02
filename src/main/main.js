@@ -20,6 +20,7 @@ const TorrentManager = require('./integrations/TorrentManager');
 const Updater = require('./updater');
 const { parseCliArgs } = require('./cli');
 const { setupIpc } = require('./ipc');
+const { PluginManager } = require('./plugins/PluginManager');
 const { HostRegistrar } = require('./integrations/HostRegistrar');
 
 // وضع مضيف Native Messaging: المتصفح يشغّل البرنامج نفسه كمضيف
@@ -274,6 +275,29 @@ if (HOST_MODE) {
       if (win && !win.isDestroyed()) win.webContents.send('pdm:event', { type: 'extracted', ...info });
     });
 
+    /* نظام الإضافات (6.5): إضافات مدمجة + مجلد المستخدم، مع خطافات اكتمال/فشل */
+    const pluginManager = new PluginManager({
+      dirs: [
+        path.join(app.getAppPath(), 'plugins-builtin'),
+        path.join(app.getPath('userData'), 'plugins')
+      ],
+      engine,
+      stateFile: path.join(app.getPath('userData'), 'plugins-state.json')
+    });
+    const _lastStatus = new Map();
+    engine.on('updated', (snap) => {
+      if (!snap || !snap.id) return;
+      const prev = _lastStatus.get(snap.id);
+      _lastStatus.set(snap.id, snap.status);
+      if (prev && prev !== snap.status) {
+        if (snap.status === 'completed') pluginManager.emitTaskCompleted(snap);
+        else if (snap.status === 'failed') pluginManager.emitTaskFailed(snap);
+      }
+    });
+    pluginManager.on('plugins-changed', () => send({ type: 'plugins', plugins: pluginManager.list() }));
+    pluginManager.on('plugin-error', (e) => send({ type: 'plugin-error', ...e }));
+    pluginManager.enableEnabled().catch(() => {});
+
     // مدير الفيديوهات (yt-dlp)
     video = new VideoManager(path.join(app.getPath('userData'), 'bin'));
     video.on('updated', () => {
@@ -326,6 +350,7 @@ if (HOST_MODE) {
       torrent,
       updater,
       host,
+      plugins: pluginManager,
       floatApi: {
         toggle: toggleFloat,
         hide: () => { if (floatWin) floatWin.hide(); }

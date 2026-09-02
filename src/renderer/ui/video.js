@@ -11,7 +11,8 @@ let videoProbeResult = null;
 
 export function videoDefaultDir() {
   const s = state.settings || {};
-  return String(s.downloadDir || '').replace(/[\\/]+$/, '') + '\\Videos';
+  const sep = (window.pdm && window.pdm.platform === 'win32') ? '\\' : '/';
+  return String(s.downloadDir || '').replace(/[\\/]+$/, '') + sep + 'Videos';
 }
 
 export function openVideoModal(url) {

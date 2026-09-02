@@ -28,10 +28,29 @@ jobs:
         run: npm test
 
   build:
-    name: Build installer (tag)
+    name: Build installers (tag)
     if: startsWith(github.ref, 'refs/tags/v')
     needs: test
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win
+            files: |
+              build-out/*.exe
+              build-out/*.zip
+              build-out/*.yml
+              build-out/*.blockmap
+          - os: macos-latest
+            args: --mac
+            files: |
+              build-out/*-mac.*
+          - os: ubuntu-latest
+            args: --linux
+            files: |
+              build-out/*-linux.*
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,16 +63,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Build Windows installer
-        run: npx electron-builder --win --publish never --config.directories.output=build-out
+      - name: Build ${{ matrix.os }} packages
+        run: npx electron-builder ${{ matrix.args }} --publish never --config.directories.output=build-out
 
       - name: Upload artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build-out/*.exe
-            build-out/*.yml
-            build-out/*.blockmap
+          files: ${{ matrix.files }}
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -35,6 +35,8 @@ export async function openSettings() {
   $('#stAutoFloat').checked = !!s.autoFloat;
   $('#stAutoExtract').checked = !!s.autoExtract;
   $('#stNameTemplate').value = s.nameTemplate || '';
+  // المكوّنات الإضافية (6.5)
+  renderPluginsList();
   $('#stLang').value = s.language || 'ar';
   $('#stTheme').value = s.theme || 'dark';
   $('#stAccent').value = s.accentColor || '#4f8cff';
@@ -177,6 +179,35 @@ export function wireExtUI() {
       renderExtRows();
     } catch (err) {
       toast('⚠️ ' + (err.message || err), 'err');
+    }
+  });
+}
+
+/* ===== المكوّنات الإضافية (6.5) ===== */
+export async function renderPluginsList() {
+  const el = $('#pluginsList');
+  if (!el) return;
+  const plugs = await window.pdm.invoke('plugins:list').catch(() => []);
+  el.innerHTML = plugs.length ? plugs.map(p => `
+    <div class="row" style="padding:6px 0;">
+      <span style="flex:1" title="${p.description || ''}">🧩 ${p.name} <span class="hint">v${p.version}</span></span>
+      <label class="chk" style="display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" data-plugid="${p.id}" ${p.enabled ? 'checked' : ''}>
+        <span class="hint">${p.enabled ? window.t('plug.on') : window.t('plug.off')}</span>
+      </label>
+    </div>`).join('') : `<div class="hint">${window.t('plug.none')}</div>`;
+}
+
+export function wirePluginsUI() {
+  $('#pluginsList').addEventListener('change', async e => {
+    const cb = e.target.closest('input[data-plugid]');
+    if (!cb) return;
+    try {
+      await window.pdm.invoke('plugins:toggle', { id: cb.dataset.plugid, enabled: cb.checked });
+      renderPluginsList();
+    } catch (err) {
+      toast('⚠️ ' + (err.message || err), 'err');
+      renderPluginsList();
     }
   });
 }

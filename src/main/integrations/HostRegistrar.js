@@ -1,12 +1,15 @@
 'use strict';
 
-/* مسجل مضيف Native Messaging: يكتب ملفات التعريف ومفاتيح السجل
-   لكل متصفح (Chrome / Edge / Firefox) — يستخدم من الإعدادات وأول تشغيل */
+/* مسجل مضيف Native Messaging: يكتب ملفات التعريف ويسجلها
+   لكل متصفح (Chrome / Edge / Firefox) — متعدد المنصات (6.1):
+   - ويندوز: مفتاح السجل (reg add)
+   - ماك/لينكس: كتابة ملف التعريف في مجلد المتصفح المخصص */
 
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
+const { nativeMessagingDir } = require('../platforms');
 
 const HOST_NAME = 'com.premiumdm.host';
 const EXT_ID = 'omiblbfhcglchohlnedfiamiejhgjojh';
@@ -23,6 +26,7 @@ class HostRegistrar {
     this.exePath = exePath;
     this.isPackaged = isPackaged;
     this.extensionDir = extensionDir;
+    this.platform = process.platform;
   }
 
   /* مجلد ملفات التعريف — دائماً في userData (قابل للكتابة بدون صلاحيات مدير) */
@@ -31,16 +35,24 @@ class HostRegistrar {
   }
 
   _hostPath() {
-    if (this.isPackaged) {
-      // النسخة المثبتة: ننشئ جسراً (bat) يشغّل البرنامج نفسه بوضع --native-host
-      // حتى يقرأ stdin ويرد على المتصفح بدل فتح النافذة العادية.
-      const bat = path.join(this.manifestDir(), 'pdm-host.bat');
-      try {
-        fs.writeFileSync(bat, `@echo off\r\n""${this.exePath}"" --native-host\r\n`, 'utf8');
-      } catch (_e) { /* تجاهل */ }
-      return bat;
+    if (this.platform === 'win32') {
+      if (this.isPackaged) {
+        // النسخة المثبتة: جسر (bat) يشغّل البرنامج نفسه بوضع --native-host
+        const bat = path.join(this.manifestDir(), 'pdm-host.bat');
+        try {
+          fs.writeFileSync(bat, `@echo off\r\n""${this.exePath}"" --native-host\r\n`, 'utf8');
+        } catch (_e) { /* تجاهل */ }
+        return bat;
+      }
+      return path.join(this.extensionDir, 'native-host.bat');
     }
-    return path.join(this.extensionDir, 'native-host.bat');
+    // ماك/لينكس: جسر شل نصي
+    const sh = path.join(this.manifestDir(), 'pdm-host.sh');
+    try {
+      fs.writeFileSync(sh, `#!/bin/sh\nexec "${this.exePath || 'pdm'}" --native-host\n`, 'utf8');
+      try { fs.chmodSync(sh, 0o755); } catch (_e) {}
+    } catch (_e) { /* تجاهل */ }
+    return sh;
   }
 
   _manifestContent(browser) {
@@ -60,24 +72,47 @@ class HostRegistrar {
     if (!BROWSERS[browser]) throw new Error('متصفح غير معروف: ' + browser);
     const dir = this.manifestDir();
     await fsp.mkdir(dir, { recursive: true });
-    // ننشئ الجسر (pdm-host.bat) أولاً إن كنا في النسخة المثبتة — حتى يبقى محدّثاً دائماً
     if (this.isPackaged) this._hostPath();
     const file = path.join(dir, `${browser}-host.json`);
     await fsp.writeFile(file, this._manifestContent(browser), 'utf8');
-    const r = spawnSync('reg', ['add', BROWSERS[browser].key, '/ve', '/t', 'REG_SZ', '/d', file, '/f'], { windowsHide: true });
-    if (r.status !== 0) throw new Error('فشل كتابة السجل (reg add)');
-    return { ok: true, manifest: file };
+
+    if (this.platform === 'win32') {
+      const r = spawnSync('reg', ['add', BROWSERS[browser].key, '/ve', '/t', 'REG_SZ', '/d', file, '/f'], { windowsHide: true });
+      if (r.status !== 0) throw new Error('فشل كتابة السجل (reg add)');
+      return { ok: true, manifest: file };
+    }
+
+    // ماك/لينكس: انسخ ملف التعريف إلى مجلد المتصفح المتوقع
+    const targetDir = nativeMessagingDir(this.platform, browser);
+    if (!targetDir) throw new Error('منصة غير مدعومة للتسجيل: ' + this.platform);
+    await fsp.mkdir(targetDir, { recursive: true });
+    const targetFile = path.join(targetDir, `${HOST_NAME}.json`);
+    await fsp.writeFile(targetFile, this._manifestContent(browser), 'utf8');
+    return { ok: true, manifest: targetFile };
   }
 
   async unregister(browser) {
-    spawnSync('reg', ['delete', BROWSERS[browser].key, '/f'], { windowsHide: true });
+    if (this.platform === 'win32') {
+      spawnSync('reg', ['delete', BROWSERS[browser].key, '/f'], { windowsHide: true });
+      return { ok: true };
+    }
+    const targetDir = nativeMessagingDir(this.platform, browser);
+    if (targetDir) {
+      try { await fsp.unlink(path.join(targetDir, `${HOST_NAME}.json`)); } catch (_e) {}
+    }
     return { ok: true };
   }
 
   status(browser) {
+    if (this.platform === 'win32') {
+      try {
+        const r = spawnSync('reg', ['query', BROWSERS[browser].key], { windowsHide: true });
+        return r.status === 0 ? 'registered' : 'none';
+      } catch (_e) { return 'none'; }
+    }
+    const dir = nativeMessagingDir(this.platform, browser);
     try {
-      const r = spawnSync('reg', ['query', BROWSERS[browser].key], { windowsHide: true });
-      return r.status === 0 ? 'registered' : 'none';
+      return fs.existsSync(path.join(dir, `${HOST_NAME}.json`)) ? 'registered' : 'none';
     } catch (_e) { return 'none'; }
   }
 
