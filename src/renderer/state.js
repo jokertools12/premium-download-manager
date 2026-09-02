@@ -30,6 +30,9 @@ export const state = {
   filter: 'all',
   view: 'tasks',
   search: '',
+  sort: { key: 'createdAt', dir: 'desc' }, // 3.1: الفرز
+  selectedId: null,                         // 3.5: تحديد بلوحة المفاتيح
+  history: [],                              // 3.2: سجل التحميل
   settings: null,
   summary: {},
   speedSamples: [],

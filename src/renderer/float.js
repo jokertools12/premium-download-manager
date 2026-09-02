@@ -26,6 +26,18 @@ window.pdm.invoke('getSettings').then(s => {
   L = FL[(s && s.language) || 'ar'] || FL.ar;
 }).catch(() => {});
 
+/* 3.7: سحب رابط إلى النافذة العائمة → افتح النافذة الرئيسية واقترح الرابط */
+document.body.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'link';
+});
+document.body.addEventListener('drop', e => {
+  e.preventDefault();
+  const text = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '';
+  const m = String(text).match(/https?:\/\/[^\s]+/i);
+  if (m) window.pdm.invoke('float:dropUrl', { url: m[0] });
+});
+
 window.pdm.onEvent(data => {
   if (!data || data.type !== 'tasks') return;
   const s = data.summary || {};

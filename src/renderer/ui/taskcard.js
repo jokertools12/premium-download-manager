@@ -1,7 +1,8 @@
-/* بطاقة التحميل: بناء + تحديث متزايد (patch) بدون إعادة بناء القائمة */
+/* بطاقة التحميل: بناء + تحديث تزايدي (patch) + معاينة الوسائط (3.3) */
 
 import { fmtBytes, fmtSpeed, fmtEta } from '../lib/format.js';
-import { statusLabel, CAT_ICON } from '../state.js';
+import { isImage, isPlayable, mediaUrl } from '../lib/media.js';
+import { statusLabel, CAT_ICON, state } from '../state.js';
 
 export function taskPct(t) {
   return t.size
@@ -39,10 +40,16 @@ export function taskCard(t) {
   const pct = taskPct(t);
   const segs = segsHtml(t);
   const actions = cardActions(t, isVideo, isTorrent);
+  const selected = state.selectedId === t.id ? ' selected' : '';
+  /* مصغرة الصورة (3.3): للمهام العادية المكتملة ذات ملف صورة */
+  const isImg = !isVideo && !isTorrent && t.status === 'completed' && t.filePath && isImage(t.filePath);
+  const icon = isImg
+    ? `<img class="thumb" loading="lazy" src="${mediaUrl(t.filePath)}" alt="">`
+    : `${isTorrent ? '🧲' : (isVideo ? '🎬' : (CAT_ICON[t.category] || '📦'))}`;
 
   return `
-  <div class="task" data-id="${t.id}" data-status="${t.status}">
-    <div class="t-icon">${isTorrent ? '🧲' : (isVideo ? '🎬' : (CAT_ICON[t.category] || '📦'))}</div>
+  <div class="task${selected}" data-id="${t.id}" data-status="${t.status}">
+    <div class="t-icon">${icon}</div>
     <div class="t-main">
       <div class="t-name" title="${escapeAttr(t.filename || t.title || t.url || '')}">${escapeHtml(t.filename || t.title || t.url || '...')}</div>
       <div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div>
@@ -89,6 +96,10 @@ export function cardActions(t, isVideo, isTorrent) {
     }
     if (t.status === 'completed') {
       actions.push(`<button class="btn mini" data-act="open" data-id="${t.id}" title="${window.t('act.open')}">📂</button>`);
+    }
+    /* زر معاينة الوسائط (3.3): صور أو فيديو/صوت قابل للتشغيل داخلياً */
+    if (t.status === 'completed' && t.filePath && (isImage(t.filePath) || isPlayable(t.filePath))) {
+      actions.push(`<button class="btn mini" data-act="preview" data-id="${t.id}" title="${window.t('act.preview')}">👁</button>`);
     }
     if (t.filePath) {
       actions.push(`<button class="btn mini" data-act="folder" data-id="${t.id}" title="${window.t('act.folder')}">🗂️</button>`);

@@ -39,7 +39,7 @@ class Database {
     fs.mkdirSync(APP_DIR, { recursive: true });
     this.file = path.join(APP_DIR, 'data.json');
     this.resumeFile = path.join(APP_DIR, 'resume.json');
-    this.data = { tasks: [], settings: { ...DEFAULT_SETTINGS }, stats: {} };
+    this.data = { tasks: [], settings: { ...DEFAULT_SETTINGS }, stats: {}, history: [] };
     this.resume = {};
     this._saveTimer = null;
     this._mode = 'json';
@@ -62,6 +62,7 @@ class Database {
           CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, v TEXT);
           CREATE TABLE IF NOT EXISTS resume (id TEXT PRIMARY KEY, v TEXT);
           CREATE TABLE IF NOT EXISTS stats (d TEXT PRIMARY KEY, bytes INTEGER DEFAULT 0, files INTEGER DEFAULT 0);
+          CREATE TABLE IF NOT EXISTS history (id TEXT PRIMARY KEY, v TEXT);
         `);
         this._mode = 'sqlite';
       }
@@ -95,6 +96,12 @@ class Database {
         for (const r of this._sqlite.prepare('SELECT id, v FROM resume').all()) {
           try { this.resume[r.id] = JSON.parse(r.v); } catch (_e) {}
         }
+      } catch (_e) {}
+      try {
+        this.data.history = this._sqlite.prepare('SELECT v FROM history').all()
+          .map(r => { try { return JSON.parse(r.v); } catch (_e) { return null; } })
+          .filter(Boolean)
+          .sort((a, b) => (b.ts || 0) - (a.ts || 0));
       } catch (_e) {}
       this._normalize();
       this._migrateFromJson();
@@ -225,6 +232,43 @@ class Database {
   }
 
   getResumeState(id) { return this.resume[id] || null; }
+
+  /* ===== سجل التحميل الكامل (3.2) — آخر 1000 عملية ===== */
+  getHistory() {
+    if (!Array.isArray(this.data.history)) this.data.history = [];
+    return this.data.history;
+  }
+
+  addHistory(rec) {
+    if (!Array.isArray(this.data.history)) this.data.history = [];
+    const entry = {
+      id: rec.id || `h-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      url: rec.url || '', filename: rec.filename || '', category: rec.category || 'other',
+      size: rec.size || 0, received: rec.received || 0, status: rec.status || 'completed',
+      filePath: rec.filePath || '', ts: rec.ts || Date.now()
+    };
+    this.data.history.unshift(entry);
+    if (this.data.history.length > 1000) this.data.history.length = 1000;
+    if (this._sqlite) {
+      try { this._sqlite.prepare('INSERT OR REPLACE INTO history (id, v) VALUES (?, ?)').run(entry.id, JSON.stringify(entry)); } catch (_e) {}
+    } else this._scheduleSave();
+    return entry;
+  }
+
+  removeHistory(id) {
+    if (!Array.isArray(this.data.history)) return;
+    this.data.history = this.data.history.filter(h => h.id !== id);
+    if (this._sqlite) {
+      try { this._sqlite.prepare('DELETE FROM history WHERE id = ?').run(id); } catch (_e) {}
+    } else this._scheduleSave();
+  }
+
+  clearHistory() {
+    this.data.history = [];
+    if (this._sqlite) {
+      try { this._sqlite.prepare('DELETE FROM history').run(); } catch (_e) {}
+    } else this._scheduleSave();
+  }
 
   clearResumeState(id) {
     if (this.resume[id]) {

@@ -9,6 +9,7 @@ const SpeedLimiter = require('./SpeedLimiter');
 const { FtpTask, isFtpUrl } = require('../protocols/ftp');
 const { normalizeChecksum } = require('./checksum');
 const { extractArchive } = require('./extract');
+const { dailySeries } = require('../stats/daily');
 
 const CATEGORY_EXTS = {
   video: ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v', 'mpg', 'mpeg', '3gp', 'ts', 'vob'],
@@ -140,6 +141,15 @@ class DownloadEngine extends EventEmitter {
       if (this.stats) this.stats.observe(t.snapshot());
     }
     if (t.status === 'completed' && this.stats) this.stats.onCompleted(t.id);
+    /* سجل التحميل (3.2): تدوين الاكتمال والفشل مرة واحدة لكل مهمة */
+    if ((t.status === 'completed' || t.status === 'failed') && !t._histSaved) {
+      t._histSaved = true;
+      this.db.addHistory({
+        id: t.id, url: t.url, filename: t.filename, category: t.category,
+        size: t.size, received: t.received, status: t.status,
+        filePath: t.filePath || '', ts: Date.now()
+      });
+    }
     /* فك الأرشيف تلقائياً (2.3) — بعد الاكتمال إذا فعّل المستخدم الخيار */
     if (t.status === 'completed' && this.settings.autoExtract && t.filePath && !t._extractDone) {
       t._extractDone = true;
@@ -334,7 +344,9 @@ class DownloadEngine extends EventEmitter {
     const base = this.stats
       ? this.stats.getSummary()
       : { today: { bytes: 0, files: 0 }, week: { bytes: 0, files: 0 }, total: { bytes: 0, files: 0 } };
-    return { ...base, byCategory, active: this.summary() };
+    /* السلسلة اليومية للمخطط البياني (3.6) */
+    const daily = dailySeries(this.db.getStatsData(), 14);
+    return { ...base, byCategory, active: this.summary(), daily };
   }
 
   _emitAll() {

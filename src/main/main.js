@@ -189,9 +189,24 @@ if (HOST_MODE) {
       '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
       '.woff': 'font/woff', '.woff2': 'font/woff2', '.map': 'application/json'
     };
+    /* ملفات الوسائط المسموح عرضها داخلياً (معاينة 3.3) — قائمة بيضاء صارمة */
+    const MEDIA_MIME = {
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
+      '.webp': 'image/webp', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+      '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.m4v': 'video/mp4',
+      '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.oga': 'audio/ogg'
+    };
     protocol.handle('app', (req) => {
       try {
         const u = new URL(req.url);
+        /* مسار الوسائط: app://media/<مسار مطلق مُرمَّز> — للمعاينة والمصغرات فقط */
+        if (u.host === 'media') {
+          const fp = path.normalize(decodeURIComponent(u.pathname.replace(/^\/+/, '')));
+          const ext = path.extname(fp).toLowerCase();
+          if (!MEDIA_MIME[ext]) return new Response('forbidden', { status: 403 });
+          const data = fs.readFileSync(fp);
+          return new Response(data, { headers: { 'content-type': MEDIA_MIME[ext] } });
+        }
         if (u.host !== 'local') return new Response('not found', { status: 404 });
         const rel = path.normalize(decodeURIComponent(u.pathname)).replace(/^([\\/])+/, '');
         const fp = path.join(RENDERER_ROOT, rel);

@@ -50,6 +50,23 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
         return true;
       case 'getStats':
         return engine.getDashboardStats();
+      case 'getHistory':
+        return db.getHistory();
+      case 'clearHistory':
+        db.clearHistory();
+        return true;
+      case 'removeHistory':
+        db.removeHistory((payload || {}).id);
+        return true;
+      case 'float:dropUrl': {
+        // سحب رابط إلى النافذة العائمة (3.7): افتح الرئيسية واقترح الرابط
+        const url = String((payload || {}).url || '');
+        if (url && showMain) showMain();
+        if (url && win && !win.isDestroyed()) {
+          win.webContents.send('pdm:event', { type: 'clipboard', url });
+        }
+        return true;
+      }
       case 'importUrls':
         return engine.addBulk((payload || {}).urls || []);
       case 'readTextFile': {
@@ -151,6 +168,16 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
         const id2 = (payload || {}).id;
         const t2 = engine.get(id2) || (video && video.get(id2)) || (torrent && torrent.get(id2));
         if (t2 && t2.filePath) shell.openPath(t2.filePath);
+        return true;
+      }
+      case 'openPath': { // فتح ملف بمساره المباشر (معاينة/سجل 3.2-3.3)
+        const p1 = (payload || {}).path;
+        if (p1) shell.openPath(p1);
+        return true;
+      }
+      case 'revealPath': {
+        const p2 = (payload || {}).path;
+        if (p2) shell.showItemInFolder(p2);
         return true;
       }
       case 'win:minimize':

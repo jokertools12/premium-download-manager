@@ -26,7 +26,7 @@ import { wireContextMenus } from './ui/contextmenu.js';
   wireIpc();
   state.settings = await window.pdm.invoke('getSettings');
   window.setLang(state.settings.language || 'ar');
-  applyTheme(state.settings.theme);
+  applyTheme(state.settings.theme, state.settings.accentColor, state.settings.density);
   state.tasks = new Map((await window.pdm.invoke('list')).map(t => [t.id, t]));
   state.summary = await window.pdm.invoke('summary');
   window.addEventListener('resize', () => { if (state.view === 'dashboard') drawSpeedChart(); });

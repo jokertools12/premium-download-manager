@@ -455,3 +455,88 @@ body.dragging::after {
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; font-weight: 700; color: var(--accent);
 }
+
+/* ===== v1.3 — واجهة تنافس المتقدمة ===== */
+
+/* تحديد البطاقة (3.5) */
+.task.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+}
+
+/* مصغرة الصورة داخل البطاقة (3.3) */
+.task .t-icon .thumb,
+.task .t-icon img.thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+/* أزرار إجراء الإشعارات (3.4) */
+.toast-btn {
+  margin-inline-start: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.toast-btn:hover { background: var(--card); border-color: var(--accent); }
+
+/* السجل الكامل (3.2) */
+#historyView { padding: 14px 18px; overflow-y: auto; height: 100%; }
+.hist-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.hist-head h3 { margin: 0; font-size: 15px; }
+.hist-month {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 10px 4px 4px;
+  text-transform: capitalize;
+}
+.hist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: var(--card);
+}
+.hist-row .h-main { flex: 1; min-width: 0; }
+.hist-row .h-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+/* نافذة المعاينة (3.3) */
+.modal-card.wide { max-width: min(860px, 92vw); }
+#pvBody {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 120px;
+}
+#pvBody .pv-media { max-width: 100%; max-height: 62vh; display: block; }
+#pvBody .pv-audio { width: 100%; padding: 22px; }
+
+/* كثافة العرض المضغوطة (3.8) */
+body.compact .task { padding: 6px 10px; }
+body.compact .task .t-name { font-size: 12px; }
+body.compact .task .t-meta { font-size: 10px; }
+body.compact .bar { height: 3px; }
+body.compact #list { gap: 4px; }
+body.compact .side-item { padding: 4px 10px; }

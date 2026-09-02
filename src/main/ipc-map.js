@@ -33,6 +33,12 @@ const RENDERER_COMMANDS = {
   'removeTask':     { desc: 'إزالة مهمة من القائمة نهائياً', args: ['id'] },
   'openFile':       { desc: 'فتح الملف الناتج بالتطبيق الافتراضي', args: ['id'] },
   'showInFolder':   { desc: 'إظهار الملف في مجلده (Explorer)', args: ['id'] },
+  'openPath':       { desc: 'فتح ملف بمساره المباشر (من المعاينة/السجل)', args: ['path'] },
+  'revealPath':     { desc: 'إظهار ملف بمساره المباشر في المجلد', args: ['path'] },
+  'getHistory':     { desc: 'سجل التحميل الكامل (آخر 1000 عملية)', args: [] },
+  'clearHistory':   { desc: 'مسح سجل التحميل بالكامل', args: [] },
+  'removeHistory':  { desc: 'حذف مدخلة واحدة من السجل', args: ['id'] },
+  'float:dropUrl':  { desc: 'سحب رابط إلى النافذة العائمة — يفتح الرئيسية ويقترح الرابط', args: ['url'] },
 
   /* --- الفيديو والتورنت --- */
   'videoInfo':      { desc: 'جلب معلومات فيديو عبر yt-dlp', args: ['url'] },

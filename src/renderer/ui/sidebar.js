@@ -21,6 +21,26 @@ export function renderSidebar() {
     </button>`).join('');
 }
 
+/* ترتيب القائمة (3.1) — نقية وقابلة للاختبار */
+export const SORT_KEYS = ['createdAt', 'name', 'size', 'speed', 'status'];
+const STATUS_ORDER = { downloading: 0, queued: 1, paused: 2, failed: 3, canceled: 4, completed: 5 };
+
+function cmp(key, a, b) {
+  switch (key) {
+    case 'name': return String(a.filename || a.title || '').localeCompare(String(b.filename || b.title || ''));
+    case 'size': return (a.size || 0) - (b.size || 0);
+    case 'speed': return (a.speed || 0) - (b.speed || 0);
+    case 'status': return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+    default: return (a.createdAt || 0) - (b.createdAt || 0);
+  }
+}
+
+export function sortTasks(arr, sort) {
+  const { key = 'createdAt', dir = 'desc' } = sort || {};
+  const s = dir === 'asc' ? 1 : -1;
+  return [...arr].sort((a, b) => cmp(key, a, b) * s);
+}
+
 export function filteredTasks() {
   let arr = [...state.tasks.values()];
   if (state.filter === 'downloading') arr = arr.filter(t => ['downloading', 'queued'].includes(t.status));
@@ -30,5 +50,5 @@ export function filteredTasks() {
     const q = state.search.toLowerCase();
     arr = arr.filter(t => (t.filename || '').toLowerCase().includes(q) || (t.url || '').toLowerCase().includes(q));
   }
-  return arr.sort((a, b) => b.createdAt - a.createdAt);
+  return sortTasks(arr, state.sort);
 }

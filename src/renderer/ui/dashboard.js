@@ -31,6 +31,56 @@ export function renderDashboard() {
   }).join('') : `<div class="empty-sub">${window.t('dash.noData')}</div>`;
 }
 
+/* المخطط اليومي (3.6): أعمدة النشاط — آخر 14 يوماً */
+export function drawDailyChart() {
+  const cv = $('#dailyChart');
+  if (!cv || !cv.clientWidth) return;
+  const daily = (state.dashboardStats && state.dashboardStats.daily) || [];
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr;
+  cv.height = h * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const css = getComputedStyle(document.body);
+  const border = css.getPropertyValue('--border').trim() || '#333';
+  const muted = css.getPropertyValue('--muted').trim() || '#888';
+  const accent = css.getPropertyValue('--accent').trim() || '#4f8cff';
+  const padB = 20;
+
+  ctx.clearRect(0, 0, w, h);
+  const max = Math.max(1024, ...daily.map(d => d.bytes)) * 1.15;
+  const n = daily.length || 1;
+  const bw = Math.max(4, w / n * 0.62);
+  ctx.font = '10px Segoe UI';
+  // الشبكة الأفقية
+  ctx.strokeStyle = border;
+  ctx.fillStyle = muted;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = 4 + ((h - padB - 4) * i) / 3;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    ctx.fillText(fmtBytes((max * (3 - i)) / 3), 4, y - 3);
+  }
+  if (!daily.some(d => d.bytes > 0)) {
+    ctx.font = '12px Segoe UI';
+    ctx.fillText('لا يوجد نشاط في آخر 14 يوماً', w / 2 - 90, h / 2);
+    return;
+  }
+  daily.forEach((d, i) => {
+    const cx = (i + 0.5) * (w / n);
+    const bh = d.bytes ? Math.max(2, (d.bytes / max) * (h - padB - 4)) : 1;
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = d.bytes ? 0.85 : 0.25;
+    ctx.fillRect(cx - bw / 2, h - padB - bh, bw, bh);
+    ctx.globalAlpha = 1;
+    // تسمية اليوم (أول حرفين من اليوم: DD)
+    ctx.fillStyle = muted;
+    const lbl = d.key.slice(8);
+    if (n <= 16 || i % 2 === 0) ctx.fillText(lbl, cx - 8, h - 6);
+  });
+}
+
 export function drawSpeedChart() {
   const cv = $('#speedChart');
   if (!cv || !cv.clientWidth) return;

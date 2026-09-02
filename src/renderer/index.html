@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' app: data:; media-src 'self' app:;">
   <title>Premium Download Manager</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -32,6 +32,7 @@
     <aside id="sidebar">
       <nav id="sideFilters"></nav>
       <button id="btnDashboard" class="side-item"><span>📊</span><span data-i18n="side.dashboard">الإحصائيات</span></button>
+      <button id="btnHistory" class="side-item"><span>🕘</span><span data-i18n="side.history">السجل</span></button>
       <button id="btnRules" class="side-item"><span>📐</span><span data-i18n="side.rules">القواعد التلقائية</span></button>
       <div class="side-sep"></div>
       <div class="side-title" data-i18n="side.cats">التصنيفات</div>
@@ -47,6 +48,14 @@
         <button id="btnVideo" class="btn ghost" data-i18n="toolbar.video" data-i18n-title="toolbar.videoTitle">🎬 فيديو</button>
         <button id="btnTorrent" class="btn ghost" data-i18n="toolbar.torrent" data-i18n-title="toolbar.torrentTitle">🧲 تورنت</button>
         <input id="search" type="text" data-i18n-ph="toolbar.searchPh" placeholder="🔍 ابحث في التحميلات...">
+        <select id="sortKey" data-i18n-title="sort.title">
+          <option value="createdAt" data-i18n="sort.date">الأحدث</option>
+          <option value="name" data-i18n="sort.name">الاسم</option>
+          <option value="size" data-i18n="sort.size">الحجم</option>
+          <option value="speed" data-i18n="sort.speed">السرعة</option>
+          <option value="status" data-i18n="sort.status">الحالة</option>
+        </select>
+        <button id="btnSortDir" class="btn ghost" data-i18n-title="sort.dirTitle">↓</button>
         <div class="spacer"></div>
         <button id="btnResumeAll" class="btn ghost" data-i18n="toolbar.resumeAll" data-i18n-title="toolbar.resumeAllTitle">▶ الكل</button>
         <button id="btnPauseAll" class="btn ghost" data-i18n="toolbar.pauseAll" data-i18n-title="toolbar.pauseAllTitle">⏸ الكل</button>
@@ -68,8 +77,26 @@
           <canvas id="speedChart"></canvas>
         </div>
         <div class="chart-box">
+          <h4 data-i18n="dash.title.daily">📅 النشاط اليومي — آخر 14 يوماً</h4>
+          <canvas id="dailyChart" height="140"></canvas>
+        </div>
+        <div class="chart-box">
           <h4 data-i18n="dash.title.cats">🗂️ التوزيع حسب التصنيف</h4>
           <div id="catDist"></div>
+        </div>
+      </section>
+
+      <!-- السجل الكامل (3.2) -->
+      <section id="historyView" hidden>
+        <div class="hist-head">
+          <h3 data-i18n="hist.title">🕘 سجل التحميل الكامل</h3>
+          <div class="spacer"></div>
+          <button id="btnClearHistory" class="btn ghost" data-i18n="hist.clear">🧹 مسح السجل</button>
+        </div>
+        <div id="histList"></div>
+        <div id="histEmpty" hidden>
+          <div class="empty-icon">🕘</div>
+          <div class="empty-title" data-i18n="hist.empty">السجل فارغ — كل عمليات الإكمال والفشل تظهر هنا</div>
         </div>
       </section>
     </main>
@@ -232,6 +259,15 @@
           <label class="fld"><span data-i18n="set.theme">المظهر</span>
             <select id="stTheme"><option value="dark" data-i18n="set.themeDark">داكن</option><option value="light" data-i18n="set.themeLight">فاتح</option></select>
           </label>
+          <label class="fld"><span data-i18n="set.accent">لون التمييز</span>
+            <input id="stAccent" type="color" value="#4f8cff">
+          </label>
+          <label class="fld"><span data-i18n="set.density">كثافة العرض</span>
+            <select id="stDensity">
+              <option value="cozy" data-i18n="set.densityCozy">مريح</option>
+              <option value="compact" data-i18n="set.densityCompact">مضغوط</option>
+            </select>
+          </label>
           <label class="fld"><span data-i18n="set.lang">اللغة / Language</span>
             <select id="stLang"><option value="ar">العربية</option><option value="en">English</option><option value="tr">Türkçe</option></select>
           </label>
@@ -267,6 +303,20 @@
   </div>
 
   <div id="toasts"></div>
+
+  <!-- نافذة معاينة الوسائط (3.3) -->
+  <div id="previewModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 id="pvTitle">👁</h3><button class="modal-x" data-close="previewModal">✕</button></div>
+      <div id="pvBody"></div>
+      <div class="modal-foot">
+        <span id="pvInfo" class="hint" dir="auto"></span>
+        <div class="spacer"></div>
+        <button id="pvOpen" class="btn ghost" data-i18n="act.open">📂 فتح</button>
+        <button id="pvFolder" class="btn ghost" data-i18n="act.folder">🗂️ المجلد</button>
+      </div>
+    </div>
+  </div>
   <script src="lib/sanitize.js"></script>
   <script src="i18n.js"></script>
   <script type="module" src="app.js"></script>

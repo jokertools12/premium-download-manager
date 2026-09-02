@@ -37,6 +37,8 @@ export async function openSettings() {
   $('#stNameTemplate').value = s.nameTemplate || '';
   $('#stLang').value = s.language || 'ar';
   $('#stTheme').value = s.theme || 'dark';
+  $('#stAccent').value = s.accentColor || '#4f8cff';
+  $('#stDensity').value = s.density || 'cozy';
   $('#stSched').checked = !!(s.scheduler && s.scheduler.enabled);
   $('#stStartAt').value = (s.scheduler && s.scheduler.startAt) || '';
   $('#stStopAt').value = (s.scheduler && s.scheduler.stopAt) || '';
@@ -67,6 +69,8 @@ export async function saveSettings() {
     autoExtract: $('#stAutoExtract').checked,
     nameTemplate: $('#stNameTemplate').value.trim(),
     theme: $('#stTheme').value,
+    accentColor: $('#stAccent').value,
+    density: $('#stDensity').value,
     language: $('#stLang').value,
     scheduler: {
       enabled: $('#stSched').checked,
@@ -75,7 +79,7 @@ export async function saveSettings() {
     }
   };
   state.settings = await window.pdm.invoke('setSettings', patch);
-  applyTheme(state.settings.theme);
+  applyTheme(state.settings.theme, state.settings.accentColor, state.settings.density);
   const langChanged = state.settings.language !== window.getLang();
   if (langChanged) {
     window.setLang(state.settings.language);
