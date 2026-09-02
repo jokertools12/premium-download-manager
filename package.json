@@ -47,20 +47,18 @@
         "zip",
         "portable"
       ],
-      "artifactName": "PremiumDM-Setup-${version}.${ext}"
-    },
-    "zip": {
       "artifactName": "PremiumDM-Portable-${version}.${ext}"
-    },
-    "portable": {
-      "artifactName": "PremiumDM-PortableSingle-${version}.${ext}"
     },
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "include": "build/installer.nsh"
+      "include": "build/installer.nsh",
+      "artifactName": "PremiumDM-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "PremiumDM-PortableSingle-${version}.${ext}"
     }
   },
   "devDependencies": {

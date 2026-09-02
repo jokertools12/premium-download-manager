@@ -143,7 +143,8 @@ function buildBody(version) {
   execSync('node_modules\\.bin\\electron-builder --win --publish never --config.directories.output=build-out', {
     cwd: rootDir, stdio: 'inherit', timeout: 600000, windowsHide: true
   });
-  const exeFile = fs.readdirSync(OUTDIR).find(f => f.endsWith('.exe'));
+  const exes = fs.readdirSync(OUTDIR).filter(f => f.endsWith('.exe'));
+  const exeFile = exes.find(f => f.includes('Setup')) || exes[0];
   if (!exeFile) throw new Error('لم ينتج البناء ملف exe!');
   log('✓ اكتمل البناء: ' + exeFile + ' (' + Math.round(fs.statSync(path.join(OUTDIR, exeFile)).size / 1048576) + 'MB)');
 
@@ -188,7 +189,7 @@ function buildBody(version) {
   step(6, 'رفع الملفات (exe + latest.yml + blockmap)...');
   const uploadBase = release.upload_url.replace('{?name,label}', '');
   for (const f of fs.readdirSync(OUTDIR)) {
-    if (!/\.(exe|blockmap|yml)$/i.test(f)) continue;
+    if (!/\.(exe|blockmap|yml|zip)$/i.test(f)) continue;
     const full = path.join(OUTDIR, f);
     if (!fs.statSync(full).isFile()) continue;
     log('  ⏫ ' + f + ' (' + Math.round(fs.statSync(full).size / 1048576) + 'MB)...');

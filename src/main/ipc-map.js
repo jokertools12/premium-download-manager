@@ -56,8 +56,6 @@ const RENDERER_COMMANDS = {
   'getSettings':    { desc: 'قراءة كل الإعدادات', reply: 'settings' },
   'saveSettings':   { desc: 'حفظ تعديلات الإعدادات', args: ['patch'] },
   'pickFolder':     { desc: 'فتح حوار اختيار مجلد', reply: 'folder' },
-  'exportData':     { desc: 'تصدير المهام/الإعدادات JSON', reply: 'json' },
-  'importData':     { desc: 'استيراد نسخة JSON', args: ['json'] },
 
   /* --- النافذة والواجهة --- */
   'float':          { desc: 'إظهار/إخفاء النافذة العائمة' },
