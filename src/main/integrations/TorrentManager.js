@@ -2,6 +2,7 @@
 
 const { EventEmitter } = require('events');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 
 /* مدير التورنت: يعتمد WebTorrent (ماغنت + ملفات .torrent)

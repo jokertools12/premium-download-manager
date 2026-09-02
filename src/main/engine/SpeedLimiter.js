@@ -19,9 +19,12 @@ class SpeedLimiter {
   }
 
   /* ينتظر حتى يتوفر حجم n من الميزانية ثم يخصمه.
-     يتحقق من إلغاء المهمة حتى لا تبقى معلقة عند الإيقاف. */
+     يتحقق من إلغاء المهمة حتى لا تبقى معلقة عند الإيقاف.
+     ملاحظة: إذا طُلب n أكبر من المعدل نفسه نقيّده بالمعدل
+     (ميزانية الثانية الكاملة) حتى لا يعلق الحساب للأبد. */
   async take(n, task) {
     if (!this.rate || this.rate <= 0) return;
+    if (n > this.rate) n = this.rate;
     for (;;) {
       if (task && task.aborted) throw new Error('aborted');
       const now = Date.now();

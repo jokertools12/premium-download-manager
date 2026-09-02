@@ -120,11 +120,11 @@ function cardMetaInner(t, pct, isVideo, isTorrent) {
         <span>${fmtBytes(t.received)}${t.size ? ' / ' + fmtBytes(t.size) : ''} (${pct.toFixed(0)}%)</span>
         ${t.status === 'downloading' ? `<span class="speed">▲ ${fmtSpeed(t.speed)}</span>` : ''}
         ${t.status === 'downloading' && !isVideo && !isTorrent ? `<span>${fmtEta(t)}</span>` : ''}
-        ${isVideo && t.status === 'downloading' && t.phase ? `<span>${t.phase}</span>` : ''}
+        ${isVideo && t.status === 'downloading' && t.phase ? `<span>${escapeHtml(t.phase)}</span>` : ''}
         ${isVideo && t.isPlaylist && t.itemsTotal ? `<span>${t.itemsDone || 0} / ${t.itemsTotal}</span>` : ''}
         ${isTorrent && t.status === 'downloading' && t.peers != null ? `<span>${window.t('torrent.peers', { n: t.peers })}</span>` : ''}
         ${!isVideo && !isTorrent && t.status === 'downloading' && t.connections ? `<span>${window.t('conn.count', { n: t.connections })}</span>` : ''}
-        ${t.error ? `<span class="err">${t.error}</span>` : ''}`;
+        ${t.error ? `<span class="err">${escapeHtml(t.error)}</span>` : ''}`;
 }
 
 function taskCard(t) {
@@ -138,7 +138,7 @@ function taskCard(t) {
   <div class="task" data-id="${t.id}" data-status="${t.status}">
     <div class="t-icon">${isTorrent ? '🧲' : (isVideo ? '🎬' : (CAT_ICON[t.category] || '📦'))}</div>
     <div class="t-main">
-      <div class="t-name" title="${(t.filename || t.title || t.url || '').replace(/"/g, '&quot;')}">${t.filename || t.title || t.url || '...'}</div>
+      <div class="t-name" title="${escapeAttr(t.filename || t.title || t.url || '')}">${escapeHtml(t.filename || t.title || t.url || '...')}</div>
       <div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div>
       ${segs}
       <div class="t-meta">${cardMetaInner(t, pct, isVideo, isTorrent)}</div>
@@ -543,7 +543,7 @@ async function probeVideo() {
       $('#vidEntries').innerHTML = videoProbeResult.entries.map(e => `
         <label class="chk tor-file">
           <input type="checkbox" data-idx="${e.index}" checked>
-          <span class="tor-name" title="${String(e.title).replace(/"/g, '&quot;')}">${e.index}. ${e.title}</span>
+          <span class="tor-name" title="${escapeAttr(String(e.title))}">${e.index}. ${escapeHtml(e.title)}</span>
           ${e.duration ? `<span class="val">${fmtDur(e.duration)}</span>` : ''}
         </label>`).join('');
       $('#vidEntriesWrap').hidden = false;
@@ -630,7 +630,7 @@ async function probeTorrent() {
     $('#torFiles').innerHTML = torrentProbeResult.files.map((f, i) => `
       <label class="chk tor-file">
         <input type="checkbox" data-idx="${i}" checked>
-        <span class="tor-name" title="${f.path.replace(/"/g, '&quot;')}">${f.name}</span>
+        <span class="tor-name" title="${escapeAttr(f.path)}">${escapeHtml(f.name)}</span>
         <span class="val">${fmtBytes(f.length)}</span>
       </label>`).join('');
     $('#torFilesWrap').hidden = false;

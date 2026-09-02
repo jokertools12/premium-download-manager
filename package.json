@@ -9,7 +9,10 @@
     "start": "electron .",
     "dist": "electron-builder",
     "release": "electron-builder --publish always",
-    "clean": "node scripts/clean.js"
+    "clean": "node scripts/clean.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint ."
   },
   "publish": {
     "provider": "github",
@@ -55,7 +58,9 @@
   "devDependencies": {
     "better-sqlite3": "^13.0.3",
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "eslint": "^9.17.0",
+    "vitest": "^2.1.9"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",

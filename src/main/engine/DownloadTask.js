@@ -159,7 +159,7 @@ class DownloadTask extends EventEmitter {
         start = end + 1;
       }
     } else {
-      this.segments.push({ start: 0, end: this.size || null, received: 0, done: false });
+      this.segments.push({ start: 0, end: this.size ? this.size - 1 : null, received: 0, done: false });
     }
   }
 
