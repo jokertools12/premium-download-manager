@@ -239,6 +239,11 @@ if (HOST_MODE) {
       applyAutoFloat();
     });
 
+    /* استخراج MP3 (4.3): بث النتيجة كإشعار في الواجهة */
+    video.on('audio-extracted', (info) => {
+      if (win && !win.isDestroyed()) win.webContents.send('pdm:event', { type: 'mp3', ...info });
+    });
+
     /* فك الأرشيف التلقائي (2.3): بث النتيجة كإشعار في الواجهة */
     engine.on('extracted', (info) => {
       if (win && !win.isDestroyed()) win.webContents.send('pdm:event', { type: 'extracted', ...info });

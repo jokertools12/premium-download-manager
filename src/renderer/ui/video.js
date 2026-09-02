@@ -20,6 +20,7 @@ export function openVideoModal(url) {
   $('#vidInfo').hidden = true;
   $('#vidFormatsWrap').hidden = true;
   $('#vidEntriesWrap').hidden = true;
+  $('#vidClipWrap').hidden = true;
   $('#btnVidAll').hidden = true;
   $('#btnVideoDownload').hidden = false;
   $('#btnVideoDownload').textContent = window.t('video.start');
@@ -75,6 +76,7 @@ export async function probeVideo() {
       $('#btnVideoDownload').disabled = false;
     }
     $('#vidStatus').textContent = '';
+    $('#vidClipWrap').hidden = videoProbeResult.type === 'playlist'; // القص للفيديو المفرد فقط
   } catch (err) {
     $('#vidStatus').textContent = '⚠️ ' + (err.message || err);
   } finally {
@@ -85,10 +87,18 @@ export async function probeVideo() {
 export async function startVideoDownload(allEntries) {
   if (!videoProbeResult) return;
   const dir = $('#vidDir').value.trim() || videoDefaultDir();
+  /* خيارات ملك الوسائط (4.1–4.6) */
+  const mediaOpts = {
+    audioOnly: $('#vidMp3').checked,
+    subtitles: $('#vidSubs').checked,
+    mergeOutput: $('#vidMerge').value,
+    clipStart: $('#vidClipStart').value.trim(),
+    clipEnd: $('#vidClipEnd').value.trim()
+  };
   try {
     let payload;
     if (videoProbeResult.type === 'playlist') {
-      payload = { url: videoProbeResult.url, dir, title: videoProbeResult.title, playlist: true };
+      payload = { url: videoProbeResult.url, dir, title: videoProbeResult.title, playlist: true, ...mediaOpts };
       if (!allEntries) {
         const idxs = [...$('#vidEntries').querySelectorAll('input:checked')]
           .map(el => +el.dataset.idx);
@@ -100,7 +110,8 @@ export async function startVideoDownload(allEntries) {
         url: videoProbeResult.url,
         formatId: $('#vidFormats').value || 'best',
         dir,
-        title: videoProbeResult.title
+        title: videoProbeResult.title,
+        ...mediaOpts
       };
     }
     await window.pdm.invoke('video:download', payload);
@@ -108,6 +119,13 @@ export async function startVideoDownload(allEntries) {
     toast(window.t('video.added'), 'ok');
   } catch (err) {
     toast(window.t('video.fail', { msg: err.message || err }), 'err');
+  }
+}
+
+/* تحديد/إلغاء كل عناصر قائمة التشغيل (4.4) */
+function setAllEntries(checked) {
+  for (const el of $('#vidEntries').querySelectorAll('input[type="checkbox"]')) {
+    el.checked = checked;
   }
 }
 
@@ -120,4 +138,6 @@ export function wireVideoUI() {
   };
   $('#btnVideoDownload').onclick = () => startVideoDownload(false);
   $('#btnVidAll').onclick = () => startVideoDownload(true);
+  $('#btnVidSelAll').onclick = () => setAllEntries(true);
+  $('#btnVidSelNone').onclick = () => setAllEntries(false);
 }

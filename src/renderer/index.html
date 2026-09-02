@@ -179,6 +179,10 @@
         <label class="fld"><span data-i18n="video.entries">عناصر قائمة التشغيل</span>
           <div id="vidEntries" class="tor-files"></div>
         </label>
+        <div class="row" style="margin-top:6px;">
+          <button id="btnVidSelAll" class="btn ghost" data-i18n="vid.all">✔ تحديد الكل</button>
+          <button id="btnVidSelNone" class="btn ghost" data-i18n="vid.none">✕ إلغاء التحديد</button>
+        </div>
       </div>
       <label class="fld" id="vidFormatsWrap" hidden><span data-i18n="video.quality">اختر الجودة</span>
         <select id="vidFormats" size="8"></select>
@@ -186,6 +190,29 @@
       <label class="fld"><span data-i18n="video.folder">مجلد الحفظ</span>
         <div class="row"><input id="vidDir" type="text" dir="ltr"><button id="vidBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>
       </label>
+      <!-- خيارات ملك الوسائط (4.1–4.6) -->
+      <div class="vid-media">
+        <div class="row">
+          <label class="chk"><input id="vidMp3" type="checkbox"> <span data-i18n="video.mp3">🎵 صوت MP3 فقط</span></label>
+          <label class="chk"><input id="vidSubs" type="checkbox"> <span data-i18n="video.subs">💾 الترجمات</span></label>
+          <label class="fld"><span data-i18n="video.merge">صيغة الدمج</span>
+            <select id="vidMerge">
+              <option value="" data-i18n="video.mergeAuto">تلقائي</option>
+              <option value="mp4">MP4</option>
+              <option value="mkv">MKV</option>
+            </select>
+          </label>
+        </div>
+        <div class="row" id="vidClipWrap" hidden>
+          <span class="hint" data-i18n="video.clip">✂️ قص مقطع:</span>
+          <label class="fld"><span data-i18n="video.clipFrom">من</span>
+            <input id="vidClipStart" type="text" dir="ltr" data-i18n-ph="video.clipHint" placeholder="0:30">
+          </label>
+          <label class="fld"><span data-i18n="video.clipTo">إلى</span>
+            <input id="vidClipEnd" type="text" dir="ltr" data-i18n-ph="video.clipHint" placeholder="2:15">
+          </label>
+        </div>
+      </div>
       <div id="vidStatus" class="hint"></div>
       <div class="modal-foot">
         <button class="btn ghost" data-close="videoModal" data-i18n="video.cancel">إلغاء</button>

@@ -69,6 +69,9 @@ export function wireIpc() {
       syncKindTasks(data.videos || [], 'video', data.summary);
     } else if (data.type === 'torrents') {
       syncKindTasks(data.torrents || [], 'torrent', data.summary);
+    } else if (data.type === 'mp3') {
+      // استخراج MP3 (4.3)
+      toast(data.ok ? window.t('mp3.done', { name: data.name || '' }) : window.t('mp3.failed'), data.ok ? 'ok' : 'err');
     } else if (data.type === 'update') {
       handleUpdateEvent(data.update);
     } else if (data.type === 'extracted') {
@@ -177,7 +180,7 @@ export function wireMainUI() {
   };
 
   // أزرار التحميلات (تفويض الأحداث) + تحديد البطاقة
-  $('#list').addEventListener('click', e => {
+  $('#list').addEventListener('click', async e => {
     const b = e.target.closest('[data-act]');
     if (!b) {
       // تحديد بالنقر (3.5) — مساحة/حذف يعملان على المحدد
@@ -204,6 +207,14 @@ export function wireMainUI() {
       window.pdm.invoke('remove', { id, deleteFile: false });
     }
     else if (act === 'vcancel') window.pdm.invoke('video:cancel', { id });
+    else if (act === 'vmp3') {
+      try {
+        await window.pdm.invoke('video:extractAudio', { id });
+        toast(window.t('mp3.started'), 'ok');
+      } catch (err) {
+        toast(window.t('mp3.failed') + ': ' + (err.message || err), 'err');
+      }
+    }
     else if (act === 'vremove') {
       state.tasks.delete(id);
       removeCardEl(id);

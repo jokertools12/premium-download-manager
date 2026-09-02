@@ -6,6 +6,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
+const { buildYtDlpArgs } = require('./ytdlp-args');
 
 const YT_DLP_URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
 const FFMPEG_URL = 'https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip';
@@ -282,7 +283,8 @@ class VideoManager extends EventEmitter {
   }
 
   /* ===== بدء تحميل فيديو / قائمة تشغيل ===== */
-  async start({ url, formatId, dir, title, playlist, items }) {
+  async start({ url, formatId, dir, title, playlist, items,
+                audioOnly, subtitles, subsLangs, clipStart, clipEnd, mergeOutput }) {
     const id = 'vid-' + crypto.randomUUID();
     const task = {
       id, kind: 'video', category: 'video', url,
@@ -292,6 +294,13 @@ class VideoManager extends EventEmitter {
       isPlaylist: !!playlist,
       items: items || null,
       itemsDone: 0, itemsTotal: null,
+      /* ملك الوسائط (4.x): صوت فقط، ترجمات، قص، صيغة دمج */
+      audioOnly: !!audioOnly,
+      subtitles: !!subtitles,
+      subsLangs: subsLangs || null,
+      clipStart: clipStart || null,
+      clipEnd: clipEnd || null,
+      mergeOutput: mergeOutput || null,
       status: 'downloading', received: 0, size: null, speed: 0, percent: null,
       error: null, createdAt: Date.now(), completedAt: null, phase: 'تهيئة...'
     };
@@ -315,7 +324,8 @@ class VideoManager extends EventEmitter {
         task.received = 0; task.size = null; task.percent = null;
       }
 
-      const needsMerge = (task.formatId || '').includes('+') || this.isStreamUrl(task.url);
+      const built = buildYtDlpArgs(task);
+      const needsMerge = built.needsMerge || this.isStreamUrl(task.url);
       if (needsMerge && !this.ffmpegDir()) {
         task.phase = 'تنزيل أداة الدمج ffmpeg (مرة واحدة فقط)...';
         this._emit(task);
@@ -329,27 +339,10 @@ class VideoManager extends EventEmitter {
       }
 
       await fsp.mkdir(task.dir, { recursive: true });
-      const args = ['--newline', '--no-warnings'];
-      if (task.isPlaylist) {
-        args.push(
-          '--yes-playlist',
-          '-o', path.join(task.dir, '%(playlist_title|Playlist).60s/%(title).80s.%(ext)s')
-        );
-        if (task.items) args.push('--playlist-items', task.items);
-      } else {
-        args.push(
-          '-f', task.formatId || 'best',
-          '--no-playlist',
-          '-o', path.join(task.dir, '%(title).80s.%(ext)s')
-        );
-      }
-      args.push(
-        '--progress-template', 'download:PROG|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress._percent_str)s',
-        '--print', 'after_move:DONE|%(filepath)s'
-      );
+      /* built.args يتضمن كل شيء: progress-template و --print والرابط أخيراً */
+      const args = built.args;
       const ffDir = this.ffmpegDir();
       if (ffDir) args.push('--ffmpeg-location', ffDir);
-      args.push(task.url);
 
       await new Promise((resolve, reject) => {
         const proc = spawn(this.ytDlpPath, args, { windowsHide: true });
@@ -460,6 +453,97 @@ class VideoManager extends EventEmitter {
 
   isStreamUrl(url) {
     return /\.m3u8($|[?#])|\.mpd($|[?#])/i.test(String(url || ''));
+  }
+
+  /* ===== استخراج الصوت من فيديو مكتمل إلى MP3 (4.3) =====
+     يعمل كعملية خلفية ببطاقة خاصة بها (تقدم مباشر من ffmpeg) */
+  async extractAudio(id) {
+    const src = this.tasks.get(id);
+    if (!src || src.status !== 'completed' || !src.filePath) {
+      throw new Error('لا يوجد فيديو مكتمل لاستخراج الصوت');
+    }
+    const outPath = src.filePath.replace(/\.[^.\\/]+$/, '') + '.mp3';
+    if (fs.existsSync(outPath)) throw new Error('الملف الصوتي موجود مسبقاً: ' + path.basename(outPath));
+
+    const taskId = 'aud-' + crypto.randomUUID();
+    const task = {
+      id: taskId, kind: 'video', category: 'audio', url: src.url,
+      formatId: 'audio', dir: path.dirname(src.filePath),
+      filename: '', filePath: null,
+      title: (src.filename || src.title || 'فيديو') + ' → MP3',
+      isPlaylist: false, items: null, itemsDone: 0, itemsTotal: null,
+      audioOnly: true, subtitles: false, subsLangs: null,
+      clipStart: null, clipEnd: null, mergeOutput: null,
+      status: 'downloading', received: 0, size: null, speed: 0, percent: 0,
+      error: null, createdAt: Date.now(), completedAt: null, phase: 'استخراج الصوت...'
+    };
+    this.tasks.set(taskId, task);
+    this._emit(task);
+
+    (async () => {
+      try {
+        if (!this.ffmpegDir()) {
+          task.phase = 'تنزيل أداة ffmpeg (مرة واحدة فقط)...';
+          this._emit(task);
+          await this.ensureFfmpeg((done, total) => {
+            task.received = done;
+            task.size = total || null;
+            task.percent = total ? (done / total) * 100 : null;
+            this._emit(task);
+          });
+          task.received = 0; task.size = null; task.percent = 0;
+        }
+        const args = ['-y', '-i', src.filePath, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', outPath];
+        await new Promise((resolve, reject) => {
+          const proc = spawn(path.join(this.ffmpegDir(), 'ffmpeg.exe'), args, { windowsHide: true });
+          task._proc = proc;
+          let stderr = '';
+          proc.stderr.on('data', d => {
+            stderr += d.toString();
+            if (stderr.length > 4000) stderr = stderr.slice(-2000);
+            const tm = /time=(\d+):(\d+):(\d+)/.exec(stderr.slice(-300));
+            const dm = /Duration:\s*(\d+):(\d+):(\d+)/.exec(stderr);
+            if (tm && dm) {
+              const cur = (+tm[1]) * 3600 + (+tm[2]) * 60 + (+tm[3]);
+              const tot = (+dm[1]) * 3600 + (+dm[2]) * 60 + (+dm[3]);
+              if (tot > 0) task.percent = Math.min(99, (cur / tot) * 100);
+            }
+            const now = Date.now();
+            if (!this._lastProgEmit || now - this._lastProgEmit > 600) {
+              this._lastProgEmit = now;
+              this._emit(task);
+            }
+          });
+          proc.on('error', reject);
+          proc.on('exit', code => {
+            task._proc = null;
+            if (task.status === 'canceled') return resolve();
+            if (code === 0 && fs.existsSync(outPath)) {
+              task.status = 'completed';
+              task.completedAt = Date.now();
+              task.percent = 100;
+              task.phase = '';
+              task.filePath = outPath;
+              task.filename = path.basename(outPath);
+              this._emit(task);
+              this.emit('audio-extracted', { ok: true, name: task.filename, filePath: outPath });
+              return resolve();
+            }
+            this.emit('audio-extracted', { ok: false, name: src.filename || '' });
+            const tail = (stderr.split('\n').filter(Boolean).pop() || '').slice(0, 150);
+            reject(new Error('فشل استخراج الصوت (كود ' + code + ') ' + tail));
+          });
+        });
+      } catch (err) {
+        if (task.status !== 'canceled') {
+          task.status = 'failed';
+          task.error = String((err && err.message) || err).slice(0, 300);
+          this._emit(task);
+        }
+      }
+    })();
+
+    return { ...task };
   }
 
   /* تحميل تلقائي بأفضل جودة (للروابط القادمة من المتصفح/الحافظة) */

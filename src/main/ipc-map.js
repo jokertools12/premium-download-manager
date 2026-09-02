@@ -41,8 +41,10 @@ const RENDERER_COMMANDS = {
   'float:dropUrl':  { desc: 'سحب رابط إلى النافذة العائمة — يفتح الرئيسية ويقترح الرابط', args: ['url'] },
 
   /* --- الفيديو والتورنت --- */
-  'videoInfo':      { desc: 'جلب معلومات فيديو عبر yt-dlp', args: ['url'] },
-  'videoDownload':  { desc: 'تنزيل فيديو بجودة محددة', args: ['url', 'formatId?'] },
+  'video:probe':       { desc: 'فحص رابط فيديو/قائمة تشغيل عبر yt-dlp', args: ['url'] },
+  'video:download':    { desc: 'تنزيل فيديو — يدعم: formatId، audioOnly (MP3)، subtitles، clipStart/clipEnd (قص)، mergeOutput (mp4/mkv)، playlist/items', args: ['url', 'formatId?', 'audioOnly?', 'subtitles?', 'clipStart?', 'clipEnd?', 'mergeOutput?', 'playlist?', 'items?'] },
+  'video:cancel':      { desc: 'إلغاء مهمة فيديو/قائمة تشغيل', args: ['id'] },
+  'video:extractAudio': { desc: 'استخراج صوت MP3 من فيديو مكتمل (ffmpeg — عملية خلفية ببطاقة تقدم)', args: ['id'] },
   'torrentAdd':     { desc: 'إضافة ماغنت/ملف تورنت عبر WebTorrent', args: ['magnet'] },
   'torrentFiles':   { desc: 'قائمة ملفات التورنت لاختيارها', args: ['infoHash'] },
   'torrentSelect':  { desc: 'تنزيل ملفات محددة من التورنت', args: ['infoHash', 'indexes'] },

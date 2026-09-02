@@ -96,6 +96,8 @@ function setupIpc({ getWindow, db, engine, video, torrent, updater, host, floatA
       case 'video:cancel':
         video.cancel((payload || {}).id);
         return true;
+      case 'video:extractAudio':
+        return video.extractAudio((payload || {}).id);
       case 'video:remove': {
         const pv = payload || {};
         video.remove(pv.id, !!pv.deleteFile);

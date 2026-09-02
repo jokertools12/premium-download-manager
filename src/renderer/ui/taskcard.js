@@ -69,6 +69,10 @@ export function cardActions(t, isVideo, isTorrent) {
     if (t.status === 'completed' && t.filePath) {
       actions.push(`<button class="btn mini" data-act="open" data-id="${t.id}" title="${window.t('act.open')}">📂</button>`);
       actions.push(`<button class="btn mini" data-act="folder" data-id="${t.id}" title="${window.t('act.folder')}">🗂️</button>`);
+      /* استخراج MP3 (4.3): لكل فيديو مكتمل قابل للفك */
+      if (!String(t.filePath).toLowerCase().endsWith('.mp3')) {
+        actions.push(`<button class="btn mini" data-act="vmp3" data-id="${t.id}" title="${window.t('act.toMp3')}">🎵</button>`);
+      }
     }
     actions.push(`<button class="btn mini" data-act="vremove" data-id="${t.id}" title="${window.t('act.vremove')}">🗑️</button>`);
   } else if (isTorrent) {

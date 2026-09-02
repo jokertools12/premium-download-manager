@@ -1,6 +1,6 @@
 {
   "name": "premium-download-manager",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Premium Download Manager - أسرع وأنيق مثل IDM وأكثر",
   "main": "src/main/main.js",
   "author": "PremiumDM",
