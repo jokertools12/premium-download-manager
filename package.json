@@ -81,7 +81,10 @@
       "runAfterFinish": true,
       "include": "build/installer.nsh",
       "artifactName": "PremiumDM-Setup-${version}.${ext}",
-      "installerLanguages": ["ar_SA", "en_US"]
+      "installerLanguages": [
+        "ar_SA",
+        "en_US"
+      ]
     },
     "portable": {
       "artifactName": "PremiumDM-PortableSingle-${version}.${ext}"
