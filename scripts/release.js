@@ -32,6 +32,8 @@ function run(cmd, label) {
   run(`npm version ${type} --no-git-tag-version`, 'رفع رقم الإصدار (' + type + ')');
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   const version = pkg.version;
+  const { syncAllVersions } = require('./sync-version.js');
+  syncAllVersions(version);
 
   // 3) اختبر
   run('node test/queue-test.js', 'اختبار سريع (طابور - بدون إنترنت)');

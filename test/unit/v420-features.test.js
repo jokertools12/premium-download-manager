@@ -4,16 +4,16 @@ import { describe, it, expect, vi } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs';
 
-describe('ميزات وتحسينات الإصدار v4.2.0 (v4.2.0 Features & Resilience)', () => {
-  it('التحقق من رقم الإصدار 4.2.0 في package.json و manifest.json و background.js', () => {
+describe('ميزات وتحسينات الإصدار v4.3.0 (v4.3.0 Features & Resilience)', () => {
+  it('التحقق من صحة أرقام الإصدارات في package.json و manifest.json و background.js', () => {
     const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
-    expect(pkg.version).toBe('4.2.0');
+    expect(pkg.version).toBe('4.3.0');
 
     const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../src/extension/manifest.json'), 'utf8'));
-    expect(manifest.version).toBe('4.2.0');
+    expect(manifest.version).toBe('4.3.0');
 
     const bgContent = fs.readFileSync(path.resolve(__dirname, '../../src/extension/background.js'), 'utf8');
-    expect(bgContent).toContain('v4.2.0');
+    expect(bgContent).toContain('v4.3.0');
   });
 
   it('buildYtDlpArgs: يتضمن --windows-filenames و --no-mtime وقالب التسمية بدون اقتطاع مكسور .80s', async () => {
@@ -52,7 +52,7 @@ describe('ميزات وتحسينات الإصدار v4.2.0 (v4.2.0 Features & R
       engine: mockEngine,
       video: mockVideo,
       videoDir: () => 'C:\\Downloads',
-      version: '4.2.0'
+      version: '4.3.0'
     });
     // اختبار دالة مسار /summary
     await server.start();
@@ -66,7 +66,7 @@ describe('ميزات وتحسينات الإصدار v4.2.0 (v4.2.0 Features & R
       expect(data.connected).toBe(true);
       expect(data.speed).toBe(1048576 + 524288);
       expect(data.activeCount).toBe(3);
-      expect(data.version).toBe('4.2.0');
+      expect(data.version).toBe('4.3.0');
     } finally {
       server.stop();
     }

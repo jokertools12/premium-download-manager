@@ -438,9 +438,23 @@ class VideoManager extends EventEmitter {
           } else if (l.startsWith('[download] Destination:') || l.startsWith('[Merger]') || l.startsWith('[ExtractAudio]')) {
             const m = /"(.+)"$/.exec(l) || /Destination:\s*(.+)$/.exec(l);
             if (m) { task.filename = path.basename(m[1]); task.filePath = m[1]; }
+            if (l.startsWith('[Merger]')) {
+              task.phase = 'جاري دمج الفيديو والصوت عبر ffmpeg...';
+              this._emit(task);
+            } else if (l.startsWith('[ExtractAudio]')) {
+              task.phase = 'جاري استخراج وتحويل الصوت...';
+              this._emit(task);
+            }
           } else if (l.startsWith('DONE|')) {
             task.filePath = l.slice(5).trim();
             task.filename = path.basename(task.filePath);
+            try {
+              if (task.filePath && fs.existsSync(task.filePath)) {
+                const st = fs.statSync(task.filePath);
+                task.size = st.size;
+                task.received = st.size;
+              }
+            } catch (_e) {}
             if (task.isPlaylist) {
               task.itemsDone = (task.itemsDone || 0) + 1;
               if (task.itemsTotal) {
@@ -451,7 +465,7 @@ class VideoManager extends EventEmitter {
           }
         };
         proc.stdout.on('data', d => {
-          stdoutBuf += d.toString();
+          stdoutBuf += d.toString('utf8');
           let idx;
           while ((idx = stdoutBuf.indexOf('\n')) >= 0) {
             handleLine(stdoutBuf.slice(0, idx));
@@ -459,20 +473,20 @@ class VideoManager extends EventEmitter {
           }
         });
         let stderrBuf = '';
-        proc.stderr.on('data', d => { stderrBuf += d.toString(); });
+        proc.stderr.on('data', d => { stderrBuf += d.toString('utf8'); });
         proc.on('error', reject);
         proc.on('exit', code => {
           task._proc = null;
           if (task.status === 'canceled') return resolve();
           if (code === 0) {
             // محاولة ذكية لالتقاط الملف من المجلد إن لم يُلتقط في مسار الطباعة
-            if (!task.filePath && task.dir && fs.existsSync(task.dir)) {
+            if ((!task.filePath || !fs.existsSync(task.filePath)) && task.dir && fs.existsSync(task.dir)) {
               try {
                 const files = fs.readdirSync(task.dir).map(f => ({
                   name: f,
                   path: path.join(task.dir, f),
                   mtime: fs.statSync(path.join(task.dir, f)).mtimeMs
-                })).filter(f => !f.name.endsWith('.part') && !f.name.endsWith('.ytdl'));
+                })).filter(f => !f.name.endsWith('.part') && !f.name.endsWith('.ytdl') && !f.name.endsWith('.vtt') && !f.name.endsWith('.srt'));
                 files.sort((a, b) => b.mtime - a.mtime);
                 if (files.length) {
                   task.filePath = files[0].path;
@@ -480,11 +494,21 @@ class VideoManager extends EventEmitter {
                 }
               } catch (_e) {}
             }
+            // قراءة الحجم الحقيقي من القرص لمنع ظهور 0 B للملفات المكتملة
+            if (task.filePath && fs.existsSync(task.filePath)) {
+              try {
+                const st = fs.statSync(task.filePath);
+                task.size = st.size;
+                task.received = st.size;
+                if (!task.filename) task.filename = path.basename(task.filePath);
+              } catch (_e) {}
+            }
             task.status = 'completed';
             task.completedAt = Date.now();
             task.speed = 0;
             task.percent = 100;
             task.phase = '';
+            if (!task.filename && task.filePath) task.filename = path.basename(task.filePath);
             if (!task.filename) task.filename = (task.title || 'video') + '.mp4';
             this._emit(task);
             return resolve();

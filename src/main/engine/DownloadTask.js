@@ -378,19 +378,32 @@ class DownloadTask extends EventEmitter {
     this._workerCount++;
     try {
       while (!this.paused && !this.aborted) {
-        // خفض تكيفي: عامل زائد عن العدد المطلوب → اخرج بهدوء
+        // خفض تكيفي هادئ: عامل زائد عن العدد المطلوب → اخرج بهدوء دون قطع أي اتصال جارٍ
         if (this._workerCount > this._desiredConns) return;
         const seg = this._pickSegment();
         if (!seg) return; // لا مقاطع حرة — البقية تعمل عليها
         try {
           await this._runSegment(seg);
+        } catch (segErr) {
+          if (this.paused || this.aborted) return;
+          const isAbort = segErr && (segErr.name === 'AbortError' || /abort/i.test(segErr.message || ''));
+          if (isAbort) return;
+
+          // معالجة مرنة لانقطاع اتصال المقطع (Resilient Segment Retry):
+          // إذا انقطع الاتصال بمقطع أثناء التحميل والملف يدعم الاستئناف، نحفظ ما نزل ونعاود المحاولة بهدوء
+          if (this.supportsRanges && this.size && !seg.done && (seg._retriesSeg || 0) < 3) {
+            seg._retriesSeg = (seg._retriesSeg || 0) + 1;
+            continue;
+          }
+          throw segErr;
         } finally {
           seg._busy = false;
         }
       }
     } catch (err) {
       if (this.paused || this.aborted) return; // إيقاف عام — يعالَج في _handleError
-      if (String((err && err.message) || '') === 'aborted') return; // خفض تكيفي لهذا العامل فقط
+      const isAbort = err && (err.name === 'AbortError' || /abort/i.test(err.message || ''));
+      if (isAbort) return; // خفض تكيفي لهذا العامل فقط
       this._runError = err; // خطأ حقيقي: أوقف بقية العمال وارمِ للمعالج العام
       this._abortControllers();
     } finally {
@@ -401,6 +414,10 @@ class DownloadTask extends EventEmitter {
   _adapt(spawn) {
     if (this.paused || this.aborted || this._runError) return;
     if (!this.supportsRanges || !this.size) return;
+    // حماية نهاية التحميل: إذا بقي أقل من 5% أو أقل من 2MB، لا نغير عدد الاتصالات لتفادي التعليق قبل الاكتمال
+    const remBytes = this.size - this.received;
+    if (remBytes < 2 * 1024 * 1024 || (this.size && remBytes / this.size < 0.05)) return;
+
     this._adaptHist.push(this.speed);
     if (this._adaptHist.length > 3) this._adaptHist.shift();
     if (this._adaptHist.length < 2) return;
@@ -415,11 +432,10 @@ class DownloadTask extends EventEmitter {
       }
       return;
     }
-    // خفض: اختناق — سرعة/اتصال متدنية والإجمالي لا يتحسن
+    // خفض هادئ واحترافي: نكتفي بتقليل _desiredConns والعامل الزائد يخرج بهدوء بعد إتمام مقطعه دون قطع الاتصال قسراً
     if (per < ADAPT_BAD_PER && cur <= prev &&
         this._desiredConns > ADAPT_MIN_CONNS && this._workerCount > ADAPT_MIN_CONNS) {
       this._desiredConns--;
-      for (const c of this._controllers) { try { c.abort(); } catch (_e) {} break; }
     }
   }
 

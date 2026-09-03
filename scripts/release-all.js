@@ -65,11 +65,16 @@ function logWarn(msg) { console.log(`   ${C.amber}[WARN]${C.reset} ${msg}`); }
 function logErr(msg) { console.log(`   ${C.red}[FAIL]${C.reset} ${msg}`); }
 function logInfo(msg) { console.log(`   ${C.cyan}[INFO]${C.reset} ${msg}`); }
 
+const { syncAllVersions } = require('./sync-version.js');
+
 function getPkg() { return JSON.parse(fs.readFileSync(PKG_PATH, 'utf8')); }
 function setPkgVersion(v) {
-  const p = getPkg();
-  p.version = v;
-  fs.writeFileSync(PKG_PATH, JSON.stringify(p, null, 2) + '\n', 'utf8');
+  const res = syncAllVersions(v);
+  if (res.updatedFiles.length) {
+    logOk(`Synchronized all project files and extension to v${res.targetVersion} (${res.updatedFiles.join(', ')})`);
+  } else {
+    logOk(`Project and extension files verified at v${res.targetVersion}`);
+  }
 }
 
 function bumpVersion(ver, type) {

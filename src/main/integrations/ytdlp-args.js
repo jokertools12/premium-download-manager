@@ -35,7 +35,13 @@ function parseTimecode(str) {
            subsLangs, clipStart, clipEnd, mergeOutput }
    يعيد { args, needsMerge } */
 function buildYtDlpArgs(task) {
-  const args = ['--newline', '--no-warnings', '--windows-filenames', '--no-mtime'];
+  const args = [
+    '--newline',
+    '--no-warnings',
+    '--encoding', 'utf-8',
+    '--windows-filenames',
+    '--no-mtime'
+  ];
   const audio = !!task.audioOnly;
   const t0 = parseTimecode(task.clipStart);
   const t1 = parseTimecode(task.clipEnd);

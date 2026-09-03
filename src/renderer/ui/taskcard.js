@@ -22,9 +22,12 @@ export function segsHtml(t) {
 }
 
 export function cardMetaInner(t, pct, isVideo, isTorrent) {
+  const displayBytes = t.status === 'completed'
+    ? fmtBytes(t.size || t.received || 0)
+    : `${fmtBytes(t.received)}${t.size ? ' / ' + fmtBytes(t.size) : ''}`;
   return `
         <span class="badge ${t.status}">${statusLabel(t.status)}</span>
-        <span>${fmtBytes(t.received)}${t.size ? ' / ' + fmtBytes(t.size) : ''} (${pct.toFixed(0)}%)</span>
+        <span>${displayBytes} (${pct.toFixed(0)}%)</span>
         ${t.status === 'downloading' ? `<span class="speed">▲ ${fmtSpeed(t.speed)}</span>` : ''}
         ${t.status === 'downloading' && !isVideo && !isTorrent ? `<span>${fmtEta(t)}</span>` : ''}
         ${isVideo && t.status === 'downloading' && t.phase ? `<span>${escapeHtml(t.phase)}</span>` : ''}

@@ -1,6 +1,6 @@
 {
   "name": "premium-download-manager",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "Premium Download Manager - أسرع وأنيق مثل IDM وأكثر",
   "main": "src/main/main.js",
   "author": "PremiumDM",
@@ -10,6 +10,7 @@
     "dist": "electron-builder",
     "release": "electron-builder --publish always",
     "clean": "node scripts/clean.js",
+    "bump": "node scripts/sync-version.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint ."
