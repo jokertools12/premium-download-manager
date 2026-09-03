@@ -49,8 +49,13 @@ function buildYtDlpArgs(task) {
 
   if (task.isPlaylist) {
     args.push('--yes-playlist');
-    if (audio) args.push('-f', 'bestaudio/best');
-    args.push('-o', path.join(task.dir, '%(playlist_title|Playlist)s/%(title)s.%(ext)s'));
+    const fmt = audio ? 'bestaudio/best' : (task.formatId || 'bestvideo+bestaudio/best');
+    args.push('-f', fmt);
+    if (task.mergeOutput && !audio) args.push('--merge-output-format', task.mergeOutput);
+    const outTemplate = task.subfolder !== false
+      ? path.join(task.dir, '%(playlist_title|Playlist)s/%(playlist_index&{:02d} - |)s%(title)s.%(ext)s')
+      : path.join(task.dir, '%(title)s.%(ext)s');
+    args.push('-o', outTemplate);
     if (task.items) args.push('--playlist-items', String(task.items));
   } else {
     const fmt = audio ? 'bestaudio/best' : (task.formatId || 'best');

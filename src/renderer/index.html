@@ -43,7 +43,7 @@
       </div>
       <div class="sidebar-footer">
         <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
-        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v4.3.0</span></div>
+        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v5.0.0</span></div>
       </div>
     </aside>
 
@@ -155,6 +155,30 @@
           <button id="btnPreviewArchive" class="btn ghost" title="معاينة الأرشيف عن بعد">📦 معاينة</button>
         </div>
       </label>
+
+      <!-- بطاقة الفحص الذكي للرابط وتصنيف الملف بالذكاء الاصطناعي -->
+      <div id="addInspectCard" class="inspect-card" hidden>
+        <div class="inspect-top">
+          <div class="inspect-badges">
+            <span id="inspCategory" class="insp-badge cat">📦 عام</span>
+            <span id="inspSize" class="insp-badge size">0 B</span>
+            <span id="inspResumable" class="insp-badge res">🟢 يدعم الاستئناف</span>
+            <span id="inspSecurity" class="insp-badge sec">🛡️ آمن</span>
+          </div>
+          <span id="inspSpinner" class="insp-spinner" hidden>⏳ جاري الفحص...</span>
+        </div>
+        <div class="inspect-info">
+          <div class="inspect-field">
+            <span class="inspect-lbl">الاسم المستخرج:</span>
+            <span id="inspFilename" class="inspect-val clickable" title="انقر لاعتماده كاسم للملف">—</span>
+          </div>
+          <div class="inspect-field">
+            <span class="inspect-lbl">نوع المحتوى:</span>
+            <span id="inspMime" class="inspect-val">—</span>
+          </div>
+        </div>
+      </div>
+
       <label class="fld"><span data-i18n="add.name">اسم الملف (اختياري)</span>
         <input id="addName" type="text" dir="auto" data-i18n-ph="add.namePh" placeholder="يُحدد تلقائياً من الرابط">
       </label>
@@ -242,10 +266,12 @@
     <div class="modal-card" style="text-align:center;">
       <div class="modal-head"><h3>📱 مرافق الموبايل وإقران QR</h3><button class="modal-x" data-close="mobileModal">✕</button></div>
       <p style="font-size:0.9rem; color:#94a3b8; margin-bottom:12px;">امسح كود الاستجابة بكاميرا هاتفك المتصل بنفس شبكة الواي فاي للتحكم المباشر وإرسال الروابط</p>
-      <div id="mobileQr" style="display:inline-block; padding:12px; background:#fff; border-radius:12px; margin-bottom:12px;"></div>
-      <div id="mobileUrl" style="font-family:monospace; font-size:0.8rem; color:#4f8cff; word-break:break-all; margin-bottom:12px;"></div>
-      <div class="row" style="justify-content:center;">
-        <button id="btnRotateToken" class="btn ghost">🔄 تجديد رمز الأمان</button>
+      <div id="mobileQr" style="display:inline-block; padding:12px; background:#fff; border-radius:12px; margin-bottom:12px; box-shadow:0 8px 24px rgba(0,0,0,0.5);"></div>
+      <div id="mobileUrl" style="font-family:monospace; font-size:0.85rem; color:#38bdf8; word-break:break-all; margin-bottom:12px; direction:ltr;"></div>
+      <div class="row" style="justify-content:center; gap:8px; margin-bottom:12px;">
+        <button id="btnCopyMobileUrl" class="btn ghost sm">📋 نسخ الرابط</button>
+        <button id="btnOpenMobileBrowser" class="btn ghost sm">🌐 فتح في المتصفح</button>
+        <button id="btnRotateToken" class="btn ghost sm">🔄 تجديد الرمز</button>
       </div>
       <div class="modal-foot">
         <button class="btn ghost" data-close="mobileModal">إغلاق</button>
@@ -368,6 +394,73 @@
     </div>
   </div>
 
+  <!-- لوحة تحميل القوائم والقنوات الكاملة (Batch Channel & Playlist Downloader 2.0) -->
+  <div id="playlistModal" class="modal" hidden role="dialog" aria-modal="true">
+    <div class="modal-card extra-wide pl-modal-card">
+      <div class="modal-head">
+        <div class="pl-head-info">
+          <h3>📚 <span id="plModalTitle">لوحة تحميل قائمة التشغيل والقنوات</span></h3>
+          <div class="pl-badges">
+            <span id="plAuthor" class="pl-badge channel"></span>
+            <span id="plCount" class="pl-badge count">0 فيديو</span>
+            <span id="plDuration" class="pl-badge dur"></span>
+          </div>
+        </div>
+        <button class="modal-x" data-close="playlistModal">✕</button>
+      </div>
+
+      <!-- شريط الأدوات العلوي: بحث، تحديد، واختيار الجودة الموحدة -->
+      <div class="pl-toolbar">
+        <div class="pl-search-box">
+          <span class="pl-search-icon">🔍</span>
+          <input id="plSearch" type="text" placeholder="ابحث في أسماء الحلقات والفيديوهات...">
+        </div>
+        <div class="pl-selection-actions">
+          <button id="btnPlSelectAll" class="btn ghost sm">✔ تحديد الكل</button>
+          <button id="btnPlSelectNone" class="btn ghost sm">✕ إلغاء التحديد</button>
+          <button id="btnPlInvert" class="btn ghost sm">🔄 عكس التحديد</button>
+        </div>
+      </div>
+
+      <div class="pl-settings-bar">
+        <div class="pl-quality-group">
+          <label for="plQualitySelect">الجودة الموحدة لجميع الفيديوهات:</label>
+          <select id="plQualitySelect" class="custom-select-sm">
+            <option value="bestvideo+bestaudio/best">⭐ أفضل جودة تلقائياً (Auto Best Quality)</option>
+            <option value="bestvideo[height<=1080]+bestaudio/best">🎬 1080p Full HD • فيديو + صوت مدمج</option>
+            <option value="bestvideo[height<=720]+bestaudio/best">🎬 720p HD • فيديو + صوت مدمج</option>
+            <option value="bestvideo[height<=480]+bestaudio/best">🎬 480p SD • حجم اقتصادي</option>
+            <option value="bestaudio/best">🎵 استخراج الصوت فقط لجميع الحلقات (MP3)</option>
+          </select>
+        </div>
+        <div class="pl-folder-opts">
+          <label class="chk"><input id="plSubfolder" type="checkbox" checked> <span>إنشاء مجلد باسم القائمة وترقيم الحلقات (01, 02...)</span></label>
+        </div>
+      </div>
+
+      <!-- شبكة بطاقات الحلقات بالصور المصغرة -->
+      <div class="pl-entries-container">
+        <div id="plGrid" class="pl-grid"></div>
+      </div>
+
+      <!-- الشريط السفلي: إحصائيات التحديد، مجلد الحفظ، وبدء التنزيل -->
+      <div class="modal-foot pl-foot">
+        <div class="pl-foot-stats">
+          <span id="plSelectedCount" class="pl-stat-highlight">تم تحديد 0 من 0 فيديو</span>
+          <div class="pl-dest-inline">
+            <span>المجلد:</span>
+            <input id="plDir" type="text" dir="ltr" class="pl-dir-input">
+            <button id="plBrowse" class="btn ghost sm">تصفح…</button>
+          </div>
+        </div>
+        <div class="pl-foot-btns">
+          <button class="btn ghost" data-close="playlistModal">إلغاء</button>
+          <button id="btnStartPlaylistDownload" class="btn primary glowing-btn">⚡ بدء تنزيل الفيديوهات المحددة</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- نافذة التورنت -->
   <div id="torrentModal" class="modal" hidden role="dialog" aria-modal="true">
     <div class="modal-card wide">
@@ -384,6 +477,10 @@
         <label class="fld"><span data-i18n="torrent.files">الملفات</span>
           <div id="torFiles" class="tor-files"></div>
         </label>
+      </div>
+      <div class="row" style="margin: 8px 0; gap: 14px; flex-wrap: wrap;">
+        <label class="chk"><input id="torBooster" type="checkbox" checked> <span>⚡ تفعيل مسرع التراكرات العالمي (Trackers Booster)</span></label>
+        <label class="chk"><input id="torSequential" type="checkbox" checked> <span>🎬 التحميل المتسلسل للبث المباشر (Sequential Streaming)</span></label>
       </div>
       <label class="fld"><span data-i18n="torrent.folder">مجلد الحفظ</span>
         <div class="row"><input id="torDir" type="text" dir="ltr"><button id="torBrowse" class="btn ghost" data-i18n="add.browse">تصفح…</button></div>

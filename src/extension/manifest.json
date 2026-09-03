@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Premium Download Manager Integration",
-  "version": "4.3.0",
+  "version": "5.0.0",
   "description": "تحميل فائق السرعة، اعتراض ذكي، زر تحميل الفيديو العائم داخل المواقع، وحماية بدء المتصفح",
-  "host_permissions": ["http://127.0.0.1:45762/*", "<all_urls>"],
+  "host_permissions": [
+    "http://127.0.0.1:45762/*",
+    "<all_urls>"
+  ],
   "permissions": [
     "downloads",
     "nativeMessaging",
@@ -18,9 +21,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],

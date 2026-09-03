@@ -3,62 +3,227 @@
 html, body {
   background: transparent;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  width: 100vw;
+  height: 100vh;
+  user-select: none;
 }
 
-/* Dynamic Island Capsule 2.0 (المرحلة 14.2) */
-#fcard {
-  height: 100vh;
-  background: linear-gradient(135deg, rgba(21, 29, 48, 0.94), rgba(11, 15, 26, 0.98));
-  border: 1px solid rgba(79, 140, 255, 0.35);
-  border-radius: 16px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65), 0 0 12px rgba(79, 140, 255, 0.2);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 8px 12px;
+#fContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   1. النمط المدمج: الكبسولة الذكية (Compact Dynamic Pill)
+   ========================================================================== */
+.f-pill-view {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.94), rgba(11, 15, 26, 0.98));
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  border-radius: 26px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(56, 189, 248, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  -webkit-app-region: drag;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.f-pill-view:active { cursor: grabbing; }
+
+.f-pill-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 30%, rgba(56, 189, 248, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.f-pill-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 2;
+}
+
+.f-pill-icon {
+  font-size: 14px;
+  color: #38bdf8;
+  filter: drop-shadow(0 0 6px #38bdf8);
+}
+
+.f-pill-badge {
+  background: rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 12px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.f-pill-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  margin: 0 6px;
+  flex: 1;
+}
+
+.f-pill-speed {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.f-pill-actions {
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.f-mini-btn {
+  -webkit-app-region: no-drag;
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.f-mini-btn:hover {
+  background: rgba(56, 189, 248, 0.3);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+/* خط التقدم المصغر أسفل الكبسولة */
+.f-pill-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.f-pill-line > div {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #a855f7);
+  transition: width 0.3s ease;
+}
+
+/* ==========================================================================
+   2. النمط الموسع: لوحة التحكم العائمة (Expanded Dashboard Card)
+   ========================================================================== */
+.f-card-view {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(9, 13, 22, 0.98));
+  border: 1.5px solid rgba(56, 189, 248, 0.3);
+  border-radius: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 189, 248, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   -webkit-app-region: drag;
-  color: #f0f4fc;
-  user-select: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #f8fafc;
+  cursor: grab;
 }
 
-/* تأثير التوهج عند سحب رابط فوق الويدجت */
-#fcard.drag-over {
-  border-color: #38bdf8;
-  box-shadow: 0 0 24px rgba(56, 189, 248, 0.6);
-  transform: scale(1.02);
+.f-card-view:active { cursor: grabbing; }
+
+.f-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.f-head { display: flex; align-items: center; gap: 8px; }
-.f-title { font-weight: 700; font-size: 11.5px; color: #94a3b8; letter-spacing: .3px; }
+.f-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.f-logo {
+  font-size: 13px;
+  color: #38bdf8;
+  filter: drop-shadow(0 0 4px #38bdf8);
+}
+
 .f-badge {
-  background: rgba(79, 140, 255, .2);
-  color: #60a5fa;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
   font-size: 10.5px;
   font-weight: 700;
   border-radius: 8px;
   padding: 2px 7px;
-  border: 1px solid rgba(79, 140, 255, 0.3);
 }
 
-.f-btns { margin-inline-start: auto; display: flex; gap: 4px; }
-.f-btns button {
+.f-btns {
+  display: flex;
+  gap: 5px;
+}
+
+.f-btn {
   -webkit-app-region: no-drag;
-  width: 24px; height: 22px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8; cursor: pointer;
-  border-radius: 6px; font-size: 11px;
-  display: flex; align-items: center; justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s ease;
 }
-.f-btns button:hover {
-  background: rgba(79, 140, 255, 0.3);
-  color: #fff;
-  border-color: #4f8cff;
+
+.f-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.f-btn.close:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
+  color: #ffffff;
 }
 
 .f-name {
@@ -67,31 +232,93 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  direction: ltr;
+  direction: auto;
   unicode-bidi: plaintext;
-  color: #f8fafc;
+  text-align: start;
+  color: #f1f5f9;
+  margin: 4px 0;
 }
 
 .f-bar {
-  height: 6px;
-  border-radius: 6px;
-  background: #090d17;
-  border: 1px solid #1c263d;
+  height: 7px;
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
+
 .f-bar > div {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  border-radius: 6px;
-  transition: width .3s ease;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #a855f7);
+  border-radius: 7px;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .f-meta {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 11px;
   font-weight: 700;
-  color: #34d399;
 }
-#fPct { color: #94a3b8; }
+
+.f-speed {
+  color: #34d399;
+  font-variant-numeric: tabular-nums;
+}
+
+.f-pct {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   3. تبديل النمطين (Compact vs Expanded)
+   ========================================================================== */
+#fContainer.compact .f-card-view { display: none; }
+#fContainer.compact .f-pill-view { display: flex; }
+
+#fContainer.expanded .f-pill-view { display: none; }
+#fContainer.expanded .f-card-view { display: flex; }
+
+/* ==========================================================================
+   4. تراكب السحب والإفلات (Drag & Drop Overlay)
+   ========================================================================== */
+.f-drop-overlay {
+  display: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.96);
+  border: 2px dashed #38bdf8;
+  border-radius: 20px;
+  z-index: 99;
+  align-items: center;
+  justify-content: center;
+  animation: fDropPulse 1.2s infinite alternate;
+}
+
+#fContainer.drag-over .f-drop-overlay {
+  display: flex;
+}
+
+.f-drop-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.f-drop-icon { font-size: 20px; }
+.f-drop-text {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+@keyframes fDropPulse {
+  from { box-shadow: 0 0 8px rgba(56, 189, 248, 0.3); }
+  to { box-shadow: 0 0 24px rgba(56, 189, 248, 0.8); }
+}

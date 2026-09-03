@@ -21,3 +21,14 @@ export function openPreview(t) {
   $('#pvFolder').onclick = () => window.pdm.invoke('revealPath', { path: currentFile });
   openModal('previewModal');
 }
+
+export function openStreamPreview({ url, title, size }) {
+  if (!url) return;
+  currentFile = '';
+  $('#pvTitle').textContent = '▶ بث مباشر: ' + (title || 'فيديو التورنت');
+  $('#pvInfo').textContent = (size ? fmtBytes(size) + ' • ' : '') + 'بث متسلسل لحظي أثناء التحميل';
+  $('#pvBody').innerHTML = `<video class="pv-media" src="${url}" controls autoplay></video>`;
+  $('#pvOpen').onclick = () => window.open(url, '_blank');
+  $('#pvFolder').onclick = () => {};
+  openModal('previewModal');
+}

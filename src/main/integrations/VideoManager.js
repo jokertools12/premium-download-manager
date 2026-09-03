@@ -226,12 +226,23 @@ class VideoManager extends EventEmitter {
       let info = null;
       try { info = JSON.parse(flat.stdout); } catch (_e) {}
       if (info && (info._type === 'playlist' || Array.isArray(info.entries))) {
+        let totalDuration = 0;
         const entries = (info.entries || [])
-          .map((e, i) => ({
-            index: i + 1,
-            title: e.title || ('#' + (i + 1)),
-            duration: e.duration || null
-          }))
+          .map((e, i) => {
+            const id = e.id || '';
+            const thumb = (Array.isArray(e.thumbnails) && e.thumbnails.length)
+              ? e.thumbnails[e.thumbnails.length - 1].url
+              : (id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : '');
+            if (e.duration) totalDuration += e.duration;
+            return {
+              index: i + 1,
+              id,
+              url: e.url || (id ? `https://www.youtube.com/watch?v=${id}` : url),
+              title: e.title || ('#' + (i + 1)),
+              duration: e.duration || null,
+              thumbnail: thumb
+            };
+          })
           .filter(e => e.title);
         if (entries.length) {
           return {
@@ -240,6 +251,7 @@ class VideoManager extends EventEmitter {
             title: info.title || info.id || 'قائمة تشغيل',
             uploader: info.uploader || info.channel || '',
             count: entries.length,
+            totalDuration,
             entries
           };
         }
@@ -334,7 +346,7 @@ class VideoManager extends EventEmitter {
   /* ===== بدء تحميل فيديو / قائمة تشغيل ===== */
   async start({ url, formatId, dir, title, playlist, items,
                 audioOnly, subtitles, subsLangs, clipStart, clipEnd, mergeOutput,
-                cookiesFrom }) {
+                cookiesFrom, subfolder }) {
     const id = 'vid-' + crypto.randomUUID();
     const task = {
       id, kind: 'video', category: 'video', url,
@@ -344,7 +356,7 @@ class VideoManager extends EventEmitter {
       isPlaylist: !!playlist,
       items: items || null,
       itemsDone: 0, itemsTotal: null,
-      /* ملك الوسائط (4.x): صوت فقط، ترجمات، قص، صيغة دمج */
+      /* ملك الوسائط (4.x): صوت فقط، ترجمات، قص، صيغة دمج، مجلد فرعي */
       audioOnly: !!audioOnly,
       subtitles: !!subtitles,
       subsLangs: subsLangs || null,
@@ -352,6 +364,7 @@ class VideoManager extends EventEmitter {
       clipEnd: clipEnd || null,
       mergeOutput: mergeOutput || 'mp4',
       cookiesFrom: cookiesFrom || null,
+      subfolder: subfolder !== false,
       status: 'downloading', received: 0, size: null, speed: 0, percent: null,
       error: null, createdAt: Date.now(), completedAt: null, phase: 'تهيئة...'
     };

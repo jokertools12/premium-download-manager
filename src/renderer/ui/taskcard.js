@@ -80,6 +80,12 @@ export function cardActions(t, isVideo, isTorrent) {
     actions.push(`<button class="btn mini" data-act="vremove" data-id="${t.id}" title="${window.t('act.vremove')}">🗑️</button>`);
   } else if (isTorrent) {
     if (t.status === 'downloading') {
+      actions.push(`<button class="btn mini" data-act="tstream" data-id="${t.id}" title="▶ بث ومشاهدة الفيديو فوراً">▶</button>`);
+      actions.push(`<button class="btn mini" data-act="tpause" data-id="${t.id}" title="${window.t('act.pause')}">⏸</button>`);
+      actions.push(`<button class="btn mini" data-act="tcancel" data-id="${t.id}" title="${window.t('act.vcancel')}">✕</button>`);
+    }
+    if (t.status === 'paused') {
+      actions.push(`<button class="btn mini" data-act="tresume" data-id="${t.id}" title="${window.t('act.resume')}">▶</button>`);
       actions.push(`<button class="btn mini" data-act="tcancel" data-id="${t.id}" title="${window.t('act.vcancel')}">✕</button>`);
     }
     if (t.status === 'completed' && t.filePath) {

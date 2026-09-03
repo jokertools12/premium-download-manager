@@ -14,8 +14,10 @@ const CommunityRegistry = require('./plugins/CommunityRegistry');
 
 function setupIpc({
   getWindow, db, engine, video, torrent, updater, host, plugins,
-  floatApi, showMain, telemetry, mobileCompanion, rssFeedManager, webhooks
+  floatApi, showMain, telemetry, mobileCompanion, rssFeedManager, webhooks,
+  linkInspector
 }) {
+  const linkInsp = linkInspector || new (require('./engine/LinkInspector'))();
   const smartClassifier = new SmartClassifier();
   const domainIntelligence = new DomainIntelligence(db);
   const smartCleanup = new SmartCleanup({ db });
@@ -296,6 +298,9 @@ function setupIpc({
 
   ipcMain.handle('torrent:probe', async (_e, p) => torrent.probe(String((p || {}).magnet || '')));
   ipcMain.handle('torrent:download', async (_e, p) => torrent.start(p || {}));
+  ipcMain.handle('torrent:pause', async (_e, p) => { torrent.pause((p || {}).id); return true; });
+  ipcMain.handle('torrent:resume', async (_e, p) => { torrent.resume((p || {}).id); return true; });
+  ipcMain.handle('torrent:streamUrl', async (_e, p) => torrent.getStreamUrl((p || {}).id, (p || {}).fileIndex));
   ipcMain.handle('torrent:cancel', async (_e, p) => { torrent.cancel((p || {}).id); return true; });
   ipcMain.handle('torrent:remove', async (_e, p) => { torrent.remove((p || {}).id, !!(p || {}).deleteFile); return true; });
 
@@ -303,6 +308,8 @@ function setupIpc({
   ipcMain.handle('float:toggle', async () => { if (floatApi && floatApi.toggle) floatApi.toggle(); return true; });
   ipcMain.handle('float:close', async () => { if (floatApi && floatApi.hide) floatApi.hide(); return true; });
   ipcMain.handle('float:openMain', async () => { if (showMain) showMain(); return true; });
+  ipcMain.handle('float:setMode', async (_e, mode) => { if (floatApi && floatApi.setMode) floatApi.setMode(mode); return true; });
+  ipcMain.handle('float:getMode', async () => { return floatApi && floatApi.getMode ? floatApi.getMode() : 'compact'; });
   ipcMain.handle('float:dropUrl', async (_e, payload) => {
     const url = String((payload || {}).url || '');
     if (url && showMain) showMain();
@@ -312,6 +319,9 @@ function setupIpc({
     }
     return true;
   });
+
+  // فحص الروابط الذكي والتصنيف التلقائي (المرحلة 5)
+  ipcMain.handle('link:inspect', async (_e, p) => linkInsp.inspect(p ? p.url : '', p || {}));
 
   // 13. التحكم بالنوافذ الأساسية
   ipcMain.handle('win:minimize', async () => { const w = getWindow(); if (w) w.minimize(); return true; });
@@ -358,6 +368,7 @@ function setupIpc({
       case 'plugins:toggle':
         if (!plugins) throw new Error('الإضافات غير متاحة');
         return (payload || {}).enabled ? plugins.enable((payload || {}).id) : plugins.disable((payload || {}).id);
+      case 'link:inspect': return linkInsp.inspect(payload ? payload.url : '', payload || {});
       case 'grab:scan': return scanPage(String((payload || {}).url || ''));
       case 'exportData': {
         const sv = await dialog.showSaveDialog(win, {

@@ -18,6 +18,7 @@ const ClipboardMonitor = require('./integrations/ClipboardMonitor');
 const LocalServer = require('./integrations/LocalServer');
 const VideoManager = require('./integrations/VideoManager');
 const TorrentManager = require('./integrations/TorrentManager');
+const LinkInspector = require('./engine/LinkInspector');
 const MobileCompanion = require('./integrations/MobileCompanion');
 const RssFeedManager = require('./integrations/RssFeedManager');
 const Webhooks = require('./integrations/Webhooks');
@@ -59,11 +60,35 @@ function showWindow() {
   win.focus();
 }
 
-/* ===== النافذة العائمة (Mini Float) ===== */
+/* ===== القطعة العائمة لسطح المكتب 2.0 (Desktop Floating Mini-Drop Widget) ===== */
+function getFloatDimensions(mode) {
+  const isCompact = mode === 'compact';
+  return {
+    width: isCompact ? 172 : 340,
+    height: isCompact ? 54 : 148
+  };
+}
+
+function setFloatMode(mode) {
+  if (!floatWin || floatWin.isDestroyed()) return;
+  const targetMode = mode === 'expanded' ? 'expanded' : 'compact';
+  const { width, height } = getFloatDimensions(targetMode);
+  const [curX, curY] = floatWin.getPosition();
+  const [curW] = floatWin.getSize();
+  const newX = targetMode === 'compact' ? curX + (curW - width) : curX - (width - curW);
+  floatWin.setBounds({ x: Math.max(10, newX), y: Math.max(10, curY), width, height });
+  db.updateSettings({ floatMode: targetMode });
+  floatWin.webContents.send('pdm:event', { type: 'floatMode', mode: targetMode });
+}
+
 function createFloatWindow() {
+  const st = db.getSettings();
+  const currentMode = st.floatMode || 'compact';
+  const { width, height } = getFloatDimensions(currentMode);
+
   floatWin = new BrowserWindow({
-    width: 390,
-    height: 128,
+    width,
+    height,
     frame: false,
     resizable: false,
     alwaysOnTop: true,
@@ -77,13 +102,30 @@ function createFloatWindow() {
       sandbox: true
     }
   });
+
   floatWin.setAlwaysOnTop(true, 'screen-saver');
-  // منع النوافذ المنبثقة من النافذة العائمة
   floatWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   try {
     const wa = screen.getPrimaryDisplay().workArea;
-    floatWin.setPosition(wa.x + wa.width - 406, wa.y + wa.height - 146);
+    let x = st.floatX;
+    let y = st.floatY;
+    if (typeof x !== 'number' || typeof y !== 'number') {
+      x = wa.x + wa.width - width - 28;
+      y = wa.y + wa.height - height - 36;
+    }
+    floatWin.setBounds({ x: Math.max(0, x), y: Math.max(0, y), width, height });
   } catch (_e) {}
+
+  floatWin.on('moved', () => {
+    try {
+      if (!floatWin.isDestroyed()) {
+        const [x, y] = floatWin.getPosition();
+        db.updateSettings({ floatX: x, floatY: y });
+      }
+    } catch (_e) {}
+  });
+
   floatWin.loadFile(path.join(__dirname, '..', 'renderer', 'float.html'));
   floatWin.on('close', (e) => {
     if (!quitting) {
@@ -400,13 +442,16 @@ if (HOST_MODE) {
       plugins: pluginManager,
       floatApi: {
         toggle: toggleFloat,
-        hide: () => { if (floatWin) floatWin.hide(); }
+        hide: () => { if (floatWin) floatWin.hide(); },
+        setMode: setFloatMode,
+        getMode: () => (db.getSettings().floatMode || 'compact')
       },
       showMain: showWindow,
       telemetry,
       mobileCompanion,
       rssFeedManager,
-      webhooks
+      webhooks,
+      linkInspector: new LinkInspector()
     });
 
     createWindow();
@@ -426,7 +471,8 @@ if (HOST_MODE) {
       version: app.getVersion(),
       videoDir: () => path.join(engine.settings.downloadDir, (engine.settings.categoryDirs || {}).video || 'Videos'),
       onFocus: showWindow,
-      mobileCompanion
+      mobileCompanion,
+      qm
     });
     server.start().catch(() => {});
 

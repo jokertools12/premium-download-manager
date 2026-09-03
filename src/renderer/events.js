@@ -11,7 +11,7 @@ import { handleUpdateEvent } from './ui/updates.js';
 import { openAdd, openImport, openRules, openSettings } from './ui/modals.js';
 import { openVideoModal } from './ui/video.js';
 import { openTorrentModal } from './ui/torrent.js';
-import { openPreview } from './ui/preview.js';
+import { openPreview, openStreamPreview } from './ui/preview.js';
 import { findHistory } from './ui/history.js';
 import { openGrabber, scanGrab, grabDownloadSelected } from './ui/grabber.js';
 
@@ -275,6 +275,18 @@ export function wireMainUI() {
       window.pdm.invoke('video:remove', { id, deleteFile: false });
     }
     else if (act === 'tcancel') window.pdm.invoke('torrent:cancel', { id });
+    else if (act === 'tpause') window.pdm.invoke('torrent:pause', { id });
+    else if (act === 'tresume') window.pdm.invoke('torrent:resume', { id });
+    else if (act === 'tstream') {
+      try {
+        const res = await window.pdm.invoke('torrent:streamUrl', { id });
+        if (res && res.streamUrl) {
+          openStreamPreview({ url: res.streamUrl, title: res.fileName, size: res.length });
+        }
+      } catch (err) {
+        toast('تعذر بدء البث المباشر: ' + (err.message || err), 'err');
+      }
+    }
     else if (act === 'tremove') {
       state.tasks.delete(id);
       removeCardEl(id);

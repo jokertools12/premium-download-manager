@@ -1,9 +1,71 @@
 /* النوافذ الحوارية: إضافة رابط، الإعدادات، القواعد التلقائية، الاستيراد الجماعي، إضافة المتصفح */
 
 import { $, toast, openModal, closeModal, applyTheme } from '../lib/dom.js';
+import { fmtBytes } from '../lib/format.js';
 import { state, STREAM_RE } from '../state.js';
 import { render } from './render.js';
 import { openVideoModal } from './video.js';
+
+let inspectTimer = null;
+
+export async function inspectAddUrl(url) {
+  const target = String(url || '').trim();
+  const card = $('#addInspectCard');
+  if (!card) return;
+  if (!/^https?:\/\//i.test(target)) {
+    card.hidden = true;
+    return;
+  }
+
+  const spinner = $('#inspSpinner');
+  if (spinner) spinner.hidden = false;
+  card.hidden = false;
+
+  try {
+    const info = await window.pdm.invoke('link:inspect', { url: target });
+    if (spinner) spinner.hidden = true;
+    if (!info) return;
+
+    const catBadge = $('#inspCategory');
+    if (catBadge) catBadge.textContent = (info.categoryName || 'عام');
+
+    const sizeBadge = $('#inspSize');
+    if (sizeBadge) sizeBadge.textContent = info.size ? fmtBytes(info.size) : 'حجم غير محدد';
+
+    const resBadge = $('#inspResumable');
+    if (resBadge) {
+      resBadge.textContent = info.resumable ? '🟢 يدعم الاستئناف' : '🟡 تحميل مفرد';
+    }
+
+    const secBadge = $('#inspSecurity');
+    if (secBadge) {
+      secBadge.textContent = info.badge || '🛡️ آمن';
+      secBadge.className = 'insp-badge sec' + (info.isExecutable ? ' warning' : '');
+    }
+
+    const fnVal = $('#inspFilename');
+    if (fnVal) fnVal.textContent = info.filename || '—';
+
+    const mimeVal = $('#inspMime');
+    if (mimeVal) mimeVal.textContent = info.contentType || '—';
+
+    // تعبئة تلقائية لاسم الملف إذا لم يُدخل يدوياً
+    if (!$('#addName').value.trim() && info.filename) {
+      $('#addName').value = info.filename;
+    }
+
+    // تصنيف تلقائي لمجلد الحفظ المناسب
+    const s = state.settings || {};
+    if (s.organizeByCategory && s.downloadDir && info.category && s.categoryDirs && s.categoryDirs[info.category]) {
+      const sep = (window.pdm && window.pdm.platform === 'win32') ? '\\' : '/';
+      const catSub = s.categoryDirs[info.category];
+      const targetDir = String(s.downloadDir).replace(/[\\/]+$/, '') + sep + catSub;
+      $('#addDir').value = targetDir;
+    }
+  } catch (_e) {
+    if (spinner) spinner.hidden = true;
+  }
+}
 
 /* ===== إضافة رابط ===== */
 export async function openAdd(url) {
@@ -11,8 +73,14 @@ export async function openAdd(url) {
   $('#addName').value = '';
   $('#addChecksum').value = '';
   $('#addDir').value = (state.settings && state.settings.downloadDir) || '';
+  const card = $('#addInspectCard');
+  if (card) card.hidden = true;
   openModal('addModal');
-  if (!url) $('#addUrl').focus();
+  if (url) {
+    inspectAddUrl(url);
+  } else {
+    $('#addUrl').focus();
+  }
 }
 
 /* ===== الإعدادات ===== */
@@ -257,6 +325,22 @@ export function wireModals() {
     }
   };
   $('#addUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnStartDownload').click(); });
+  $('#addUrl').addEventListener('input', e => {
+    clearTimeout(inspectTimer);
+    inspectTimer = setTimeout(() => {
+      inspectAddUrl(e.target.value);
+    }, 350);
+  });
+
+  const inspFilename = $('#inspFilename');
+  if (inspFilename) {
+    inspFilename.onclick = () => {
+      if (inspFilename.textContent && inspFilename.textContent !== '—') {
+        $('#addName').value = inspFilename.textContent;
+        toast('تم اعتماد اسم الملف المستخرج', 'ok');
+      }
+    };
+  }
 
   // الإعدادات
   $('#stBrowse').onclick = async () => {

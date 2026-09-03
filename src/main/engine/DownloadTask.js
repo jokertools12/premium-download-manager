@@ -16,6 +16,7 @@ const ADAPT_CHECK_MS = 3500;       // دورة تقييم التكيف
 const ADAPT_MIN_CONNS = 2;         // الحد الأدنى للاتصالات
 const ADAPT_GOOD_PER = 256 * 1024; // سرعة/اتصال فوقها → توسيع
 const ADAPT_BAD_PER = 32 * 1024;   // سرعة/اتصال تحتها → خفض
+const RAM_BUFFER_THRESHOLD = 512 * 1024; // كاش الذاكرة الوسيطة (Zero-Disk I/O RAM Cache 512KB)
 
 class DownloadTask extends EventEmitter {
   constructor(opts) {
@@ -498,36 +499,68 @@ class DownloadTask extends EventEmitter {
       const segLen = (seg.end === null || seg.end === undefined)
         ? Infinity
         : (seg.end - seg.start + 1);
-      let written = seg.received; // بايتات الجزء المكتوبة فعلياً
+      let written = seg.received; // بايتات الجزء المكتوبة فعلياً على القرص
 
-      for await (const chunk of res.body) {
-        if (this.aborted) throw new Error('aborted');
-        let data = chunk;
-        if (skipBytes > 0) {
-          if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
-          data = data.subarray(skipBytes);
-          skipBytes = 0;
-        }
-        if (segLen !== Infinity && written + data.length > segLen) {
-          data = data.subarray(0, segLen - written);
-        }
-        if (!data.length) continue;
-        if (this.limiter) await this.limiter.take(data.length, this);
+      /* محرك كاش الرام (Zero-Disk I/O Cache 1.0): تجميع الكتل في الذاكرة لتقليل عمليات القرص */
+      const memChunks = [];
+      let memBytes = 0;
+
+      const flushBuffer = async () => {
+        if (!memBytes || !this.fd) return;
+        const combined = memChunks.length === 1 ? memChunks[0] : Buffer.concat(memChunks, memBytes);
+        memChunks.length = 0;
+        const writeLen = memBytes;
+        memBytes = 0;
         let pos = seg.start + written;
-        let toWrite = data;
+        let toWrite = combined;
         while (toWrite.length) {
           const w = await this.fd.write(toWrite, 0, toWrite.length, pos);
           if (!w.bytesWritten) throw new Error('فشل كتابة البيانات على القرص');
           pos += w.bytesWritten;
           toWrite = toWrite.subarray(w.bytesWritten);
         }
-        written += data.length;
+        written += writeLen;
         seg.received = written;
         this.received = this.segments.reduce((a, s) => a + s.received, 0);
+      };
+
+      try {
+        for await (const chunk of res.body) {
+          if (this.aborted) throw new Error('aborted');
+          let data = chunk;
+          if (skipBytes > 0) {
+            if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
+            data = data.subarray(skipBytes);
+            skipBytes = 0;
+          }
+          if (segLen !== Infinity && written + memBytes + data.length > segLen) {
+            const allowed = Math.max(0, segLen - (written + memBytes));
+            data = data.subarray(0, allowed);
+          }
+          if (!data.length) continue;
+          if (this.limiter) await this.limiter.take(data.length, this);
+
+          memChunks.push(data);
+          memBytes += data.length;
+
+          // تحديث إحصائيات التقدم والسرعة حياً في الذاكرة فور وصول أي حزمة
+          seg.received = written + memBytes;
+          this.received = this.segments.reduce((a, s) => a + s.received, 0);
+
+          // تفريغ دفعات متسلسلة للقرص عند امتلاء حد الكاش (512KB)
+          if (memBytes >= RAM_BUFFER_THRESHOLD) {
+            await flushBuffer();
+          }
+        }
+
+        // تفريغ ما تبقى من الكاش عند نهاية تدفق المقطع
+        await flushBuffer();
+      } finally {
+        try { await flushBuffer(); } catch (_e) {}
       }
 
       if (segLen !== Infinity && written < segLen) throw new Error('انقطع اتصال الجزء قبل اكتماله');
-      seg.received = (segLen === Infinity) ? written : written;
+      seg.received = written;
       seg.done = true;
     } finally {
       this._controllers.delete(controller);

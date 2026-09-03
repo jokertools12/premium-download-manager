@@ -3,27 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-  <title>Premium DM - Float</title>
+  <title>Premium DM - Floating Widget</title>
   <link rel="stylesheet" href="float.css">
 </head>
 <body>
-  <div id="fcard">
-    <div class="f-head">
-      <span id="fCount" class="f-badge">0 نشط</span>
-      <span class="f-title">Premium DM</span>
-      <div class="f-btns">
-        <button id="fPause" title="إيقاف كل التحميلات">⏸</button>
-        <button id="fOpen" title="فتح النافذة الرئيسية">⧉</button>
-        <button id="fClose" title="إخفاء">✕</button>
+  <div id="fContainer" class="compact">
+    <!-- النمط 1: الكبسولة الذكية المدمجة (Compact Pill) -->
+    <div id="fPill" class="f-pill-view" title="انقر مرتين لفتح التطبيق، أو اسحب لتغيير الموضع">
+      <div class="f-pill-glow"></div>
+      <div class="f-pill-left">
+        <span class="f-pill-icon">⚡</span>
+        <span id="fPillBadge" class="f-pill-badge">0</span>
+      </div>
+      <div class="f-pill-center">
+        <span id="fPillSpeed" class="f-pill-speed">0 B/s</span>
+      </div>
+      <div class="f-pill-actions">
+        <button id="fPillExpand" class="f-mini-btn" title="توسيع إلى لوحة التحكم">⤢</button>
+      </div>
+      <div class="f-pill-line"><div id="fPillBar"></div></div>
+    </div>
+
+    <!-- النمط 2: لوحة التحكم العائمة الموسعة (Expanded Card) -->
+    <div id="fCard" class="f-card-view">
+      <div class="f-head">
+        <div class="f-brand">
+          <span class="f-logo">⚡</span>
+          <span id="fCount" class="f-badge">0 نشط</span>
+        </div>
+        <div class="f-btns">
+          <button id="fPause" class="f-btn" title="إيقاف / استئناف الكل">⏸</button>
+          <button id="fOpen" class="f-btn" title="فتح النافذة الرئيسية">⧉</button>
+          <button id="fCollapse" class="f-btn" title="تصغير إلى كبسولة">▫</button>
+          <button id="fClose" class="f-btn close" title="إخفاء">✕</button>
+        </div>
+      </div>
+      <div id="fName" class="f-name" dir="auto">لا توجد تحميلات نشطة</div>
+      <div class="f-bar"><div id="fBar"></div></div>
+      <div class="f-meta">
+        <span id="fSpeed" class="f-speed">▲ 0 B/s</span>
+        <span id="fPct" class="f-pct">0%</span>
       </div>
     </div>
-    <div id="fName" class="f-name">لا توجد تحميلات نشطة</div>
-    <div class="f-bar"><div id="fBar"></div></div>
-    <div class="f-meta">
-      <span id="fSpeed">▲ 0 B/s</span>
-      <span id="fPct">0%</span>
+
+    <!-- تلميح السحب والإفلات عند إلقاء رابط فوق الويدجت -->
+    <div id="fDropOverlay" class="f-drop-overlay">
+      <div class="f-drop-box">
+        <span class="f-drop-icon">📥</span>
+        <span class="f-drop-text">أفلت الرابط هنا للتحميل الفوري</span>
+      </div>
     </div>
   </div>
+
   <script src="float.js"></script>
 </body>
 </html>

@@ -58,7 +58,9 @@ export async function startTorrentDownload(selectedOnly) {
   const payload = {
     magnet: torrentProbeResult.magnet || $('#torMagnet').value.trim(),
     dir: $('#torDir').value.trim() || (state.settings && state.settings.downloadDir) || undefined,
-    title: torrentProbeResult.name
+    title: torrentProbeResult.name,
+    booster: $('#torBooster') ? $('#torBooster').checked : true,
+    sequential: $('#torSequential') ? $('#torSequential').checked : true
   };
   if (selectedOnly) {
     const idxs = [...$('#torFiles').querySelectorAll('input:checked')]

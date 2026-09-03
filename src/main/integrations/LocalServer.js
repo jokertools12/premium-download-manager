@@ -5,7 +5,7 @@ const MediaStreamer = require('../engine/MediaStreamer');
 
 // خادم محلي متقدم يدعم إضافة المتصفح، تطبيق الموبايل، وواجهة REST API العامة (المراحل 10.1 و 12.2)
 class LocalServer {
-  constructor({ port, engine, video, videoDir, version, onFocus, mobileCompanion }) {
+  constructor({ port, engine, video, videoDir, version, onFocus, mobileCompanion, qm }) {
     this.port = port;
     this.engine = engine;
     this.video = video || null;
@@ -13,6 +13,7 @@ class LocalServer {
     this.version = version || '';
     this.onFocus = onFocus || (() => {});
     this.mobileCompanion = mobileCompanion || null;
+    this.qm = qm || null;
     this.server = null;
   }
 
@@ -141,10 +142,75 @@ class LocalServer {
           }
         }
 
+        // 5. مسارات التحكم عن بعد للموبايل (Mobile Remote Controls)
+        if (pathname === '/api/v1/pause-all' && req.method === 'POST') {
+          if (!isLocalHost && this.mobileCompanion && !this.mobileCompanion.validateToken(token)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'غير مصرح' }));
+            return;
+          }
+          if (this.engine) this.engine.pauseAll();
+          if (this.video && typeof this.video.pauseAll === 'function') this.video.pauseAll();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, message: 'تم إيقاف كافة التحميلات مؤقتاً' }));
+          return;
+        }
+
+        if (pathname === '/api/v1/resume-all' && req.method === 'POST') {
+          if (!isLocalHost && this.mobileCompanion && !this.mobileCompanion.validateToken(token)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'غير مصرح' }));
+            return;
+          }
+          if (this.engine) this.engine.resumeAll();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, message: 'تم استئناف كافة التحميلات' }));
+          return;
+        }
+
+        if (pathname.startsWith('/api/v1/tasks/') && pathname.endsWith('/cancel') && req.method === 'POST') {
+          if (!isLocalHost && this.mobileCompanion && !this.mobileCompanion.validateToken(token)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'غير مصرح' }));
+            return;
+          }
+          const parts = pathname.split('/');
+          const id = parts[4];
+          if (id && this.engine) this.engine.cancel(id);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, message: 'تم إلغاء المهمة' }));
+          return;
+        }
+
+        if (pathname === '/api/v1/system/auto-shutdown' && req.method === 'POST') {
+          if (!isLocalHost && this.mobileCompanion && !this.mobileCompanion.validateToken(token)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'غير مصرح' }));
+            return;
+          }
+          let body = '';
+          req.on('data', c => { body += c; if (body.length > 4096) req.destroy(); });
+          req.on('end', () => {
+            try {
+              const msg = JSON.parse(body || '{}');
+              const enabled = !!msg.enabled;
+              if (this.qm && typeof this.qm.setAutoShutdown === 'function') {
+                this.qm.setAutoShutdown(enabled ? 'shutdown' : 'none');
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true, autoShutdown: enabled }));
+            } catch (err) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, error: String(err) }));
+            }
+          });
+          return;
+        }
+
         // مسار ping & status & summary للتكامل التام مع إضافة المتصفح
         if (pathname === '/ping') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '4.3.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '5.0.0' }));
           return;
         }
 
@@ -160,7 +226,7 @@ class LocalServer {
             running: true,
             connected: true,
             app: 'PremiumDM',
-            version: this.version || '4.3.0',
+            version: this.version || '5.0.0',
             speed: totalSpeed,
             totalSpeed,
             active: activeCount,
