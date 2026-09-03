@@ -112,7 +112,7 @@ async function executeSelectedCleanup() {
   try {
     const res = await window.pdm.ai.executeCleanup(paths);
     toast(`✓ تم تنظيف ${res.deletedCount} ملف وتحرير ${fmtBytes(res.freedBytes)} بنجاح!`, 'ok');
-    closeModal($('#cleanupModal'));
+    closeModal('cleanupModal');
   } catch (err) {
     toast('حدث خطأ أثناء التنظيف: ' + String((err && err.message) || err), 'err');
   }

@@ -5,7 +5,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, system-ui, sans-serif; }
     body {
-      width: 350px;
+      width: 380px;
       background: #0b0f1a;
       color: #e8edf7;
       font-size: 13px;
@@ -15,9 +15,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, #1e2942 0%, #151d30 100%);
-      border-bottom: 1px solid rgba(79, 140, 255, 0.25);
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #1a2744 0%, #0f1726 100%);
+      border-bottom: 1px solid rgba(79, 140, 255, 0.3);
     }
     .head .brand {
       font-weight: 700;
@@ -30,23 +30,24 @@
     .head .ver {
       margin-inline-start: auto;
       font-size: 11px;
-      background: rgba(79, 140, 255, 0.2);
+      background: linear-gradient(135deg, rgba(79, 140, 255, 0.25), rgba(139, 92, 246, 0.25));
       color: #93c5fd;
-      padding: 2px 7px;
-      border-radius: 6px;
+      padding: 3px 9px;
+      border-radius: 8px;
       font-weight: 600;
+      border: 1px solid rgba(79, 140, 255, 0.2);
     }
 
-    /* كارت الحالة والتحكم السريع */
+    /* Status Card */
     .status-card {
       margin: 12px 14px;
-      padding: 12px;
-      background: #131a2b;
+      padding: 14px;
+      background: linear-gradient(135deg, #131a2b 0%, #0e1422 100%);
       border: 1px solid #1e2942;
-      border-radius: 10px;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
     .status-row {
       display: flex;
@@ -55,29 +56,35 @@
     }
     .status-dot {
       display: inline-block;
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       background: #34d399;
-      box-shadow: 0 0 8px #34d399;
-      margin-inline-end: 6px;
+      box-shadow: 0 0 10px #34d399;
+      margin-inline-end: 7px;
+      animation: pulse 2s ease infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
     .status-dot.offline {
       background: #f87171;
-      box-shadow: 0 0 8px #f87171;
+      box-shadow: 0 0 10px #f87171;
+      animation: none;
     }
     .quick-btns {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 4px;
+      margin-top: 2px;
     }
     .q-btn {
-      padding: 6px 10px;
+      padding: 7px 10px;
       background: #1a233a;
       border: 1px solid #2a375a;
       color: #f0f4fc;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 11.5px;
       font-weight: 600;
@@ -85,12 +92,15 @@
       align-items: center;
       justify-content: center;
       gap: 5px;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
     }
     .q-btn:hover {
       background: #233050;
       border-color: #4f8cff;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(79, 140, 255, 0.2);
     }
+    .q-btn:active { transform: translateY(0); }
 
     .sec {
       padding: 10px 14px;
@@ -109,7 +119,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 0;
+      padding: 7px 0;
       cursor: pointer;
     }
     .toggle-row label {
@@ -121,13 +131,41 @@
     .toggle-row label small {
       color: #94a3b8;
       font-size: 10.5px;
-      margin-top: 1px;
+      margin-top: 2px;
     }
-    .toggle-row input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: #4f8cff;
+
+    /* Custom Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
       cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #2a375a;
+      border-radius: 20px;
+      transition: 0.3s;
+    }
+    .slider:before {
+      content: "";
+      position: absolute;
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background: #94a3b8;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .switch input:checked + .slider { background: #4f8cff; }
+    .switch input:checked + .slider:before {
+      transform: translateX(18px);
+      background: #fff;
     }
 
     .row {
@@ -140,31 +178,129 @@
       background: #141b2c;
       border: 1px solid #222d48;
       color: #e8edf7;
-      border-radius: 6px;
-      padding: 6px 8px;
+      border-radius: 8px;
+      padding: 7px 10px;
       outline: none;
       font-size: 12px;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      border-color: #4f8cff;
+      box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.15);
     }
     input[type="text"] { width: 100%; }
     input[type="number"] { width: 65px; }
 
     .btn-action {
       width: 100%;
-      padding: 7px;
+      padding: 8px;
       background: #1c2742;
       border: 1px solid #2c3e6b;
       color: #e2e8f0;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 12px;
       font-weight: 600;
       margin-top: 6px;
+      transition: all 0.2s;
     }
     .btn-action:hover {
       background: #253457;
       border-color: #4f8cff;
     }
 
+    /* Save Button */
+    .btn-save {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #4f8cff 0%, #6366f1 100%);
+      border: none;
+      color: #fff;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 8px;
+      transition: all 0.25s;
+      box-shadow: 0 2px 10px rgba(79, 140, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(79, 140, 255, 0.45);
+    }
+    .btn-save:active { transform: translateY(0); }
+    .btn-save.saved {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Recent Downloads List */
+    .recent-list {
+      max-height: 150px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .recent-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #121827;
+      border: 1px solid #1c253b;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      transition: border-color 0.2s;
+    }
+    .recent-item:hover { border-color: #2a375a; }
+    .recent-item .r-icon { font-size: 14px; flex-shrink: 0; }
+    .recent-item .r-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      direction: ltr;
+      text-align: left;
+      color: #e8edf7;
+    }
+    .recent-item .r-time {
+      font-size: 10px;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    /* Stats Bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 14px;
+    }
+    .stat-mini {
+      padding: 10px 12px;
+      background: #131a2b;
+      border: 1px solid #1e2942;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .stat-mini .s-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #4f8cff;
+      font-family: "Segoe UI", monospace;
+    }
+    .stat-mini .s-lbl {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    /* Media list */
     .media-list {
       max-height: 120px;
       overflow-y: auto;
@@ -178,8 +314,8 @@
       justify-content: space-between;
       background: #121827;
       border: 1px solid #1c253b;
-      padding: 5px 8px;
-      border-radius: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
       font-size: 11px;
     }
     .media-item .m-url {
@@ -193,14 +329,15 @@
       margin-inline-end: 6px;
     }
     .m-btn {
-      padding: 3px 8px;
-      background: rgba(79, 140, 255, 0.2);
-      border: 1px solid rgba(79, 140, 255, 0.4);
+      padding: 4px 10px;
+      background: rgba(79, 140, 255, 0.15);
+      border: 1px solid rgba(79, 140, 255, 0.3);
       color: #93c5fd;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 10.5px;
       font-weight: 600;
+      transition: all 0.2s;
     }
     .m-btn:hover {
       background: #4f8cff;
@@ -219,8 +356,8 @@
       background: #182238;
       border: 1px solid #233050;
       color: #cbd5e1;
-      padding: 2px 7px;
-      border-radius: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
       font-size: 11px;
       display: inline-flex;
       align-items: center;
@@ -229,76 +366,130 @@
     .tag-del {
       cursor: pointer;
       color: #f87171;
+      transition: color 0.2s;
+    }
+    .tag-del:hover { color: #ef4444; }
+
+    /* Toast notification */
+    .ext-toast {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #10b981;
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 9999;
+      animation: toastIn 0.3s ease;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    .empty-hint {
+      color: #64748b;
+      font-size: 11px;
+      text-align: center;
+      padding: 12px;
     }
   </style>
 </head>
 <body>
   <div class="head">
     <div class="brand">⚡ Premium DM</div>
-    <span class="ver" id="ver">v2.2.0</span>
+    <span class="ver" id="ver">v4.0.0</span>
   </div>
 
-  <!-- كارت الاتصال والتحكم السريع -->
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-mini">
+      <div class="s-val" id="statCount">0</div>
+      <div class="s-lbl">Today's Downloads</div>
+    </div>
+    <div class="stat-mini">
+      <div class="s-val" id="statSize">0 MB</div>
+      <div class="s-lbl">Total Transferred</div>
+    </div>
+  </div>
+
+  <!-- Connection & Quick Controls -->
   <div class="status-card">
     <div class="status-row">
       <div>
         <span class="status-dot" id="dotStatus"></span>
-        <span id="txtConnStatus" style="font-weight:600;">جاري الفحص...</span>
+        <span id="txtConnStatus" style="font-weight:600;">Checking...</span>
       </div>
       <div id="txtLiveSpeed" style="font-family:monospace; color:#4ade80; font-weight:700;">0 B/s</div>
     </div>
     <div class="quick-btns">
-      <button class="q-btn" id="btnResumeAll">▶ استئناف الكل</button>
-      <button class="q-btn" id="btnPauseAll">⏸ إيقاف الكل</button>
+      <button class="q-btn" id="btnResumeAll">▶ Resume All</button>
+      <button class="q-btn" id="btnPauseAll">⏸ Pause All</button>
     </div>
   </div>
 
-  <!-- خيارات الحماية والاعتراض -->
+  <!-- Interception & Security Options -->
   <div class="sec">
-    <div class="sec-title">خيارات الاعتراض والأمان</div>
+    <div class="sec-title">Interception & Security</div>
     <div class="toggle-row">
       <label for="enabled">
-        <span>الاعتراض التلقائي للتحميلات</span>
-        <small>تحويل الروابط للبرنامج فوراً</small>
+        <span>Auto-Intercept Downloads</span>
+        <small>Redirect download links to the app</small>
       </label>
-      <input type="checkbox" id="enabled" checked>
+      <label class="switch"><input type="checkbox" id="enabled" checked><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
       <label for="startupGuard">
-        <span>🛡️ حارس بدء التشغيل (Startup Guard)</span>
-        <small>منع التنزيلات العشوائية عند فتح المتصفح</small>
+        <span>🛡️ Startup Guard</span>
+        <small>Block unwanted downloads on browser startup</small>
       </label>
-      <input type="checkbox" id="startupGuard" checked>
+      <label class="switch"><input type="checkbox" id="startupGuard" checked><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
       <label for="showVideoWidget">
-        <span>🎬 زر تحميل الفيديو العائم</span>
-        <small>إظهار زر التحميل فوق المشغلات (مثل IDM)</small>
+        <span>🎬 Floating Video Button</span>
+        <small>Show download button on video players</small>
       </label>
-      <input type="checkbox" id="showVideoWidget" checked>
+      <label class="switch"><input type="checkbox" id="showVideoWidget" checked><span class="slider"></span></label>
     </div>
     <div class="row" style="margin-top:8px;">
-      <span style="font-size:12px; flex:1;">الحد الأدنى للحجم:</span>
+      <span style="font-size:12px; flex:1;">Minimum File Size:</span>
       <input type="number" id="minSize" min="0" value="0">
       <span style="font-size:11px; color:#64748b;">MB</span>
     </div>
+
+    <!-- Save Settings Button -->
+    <button class="btn-save" id="btnSaveSettings">
+      <span>💾</span> Save Changes
+    </button>
   </div>
 
-  <!-- وسائط وبثوث التبويب الحالي -->
+  <!-- Detected Media in Current Tab -->
   <div class="sec">
-    <div class="sec-title">📺 وسائط مكتشفة في هذا التبويب</div>
+    <div class="sec-title">📺 Detected Media</div>
     <div class="media-list" id="streamsList">
-      <div style="color:#64748b; font-size:11px; text-align:center; padding:10px;">لا توجد وسائط بث نشطة حالياً</div>
+      <div class="empty-hint">No active streams detected in this tab</div>
     </div>
   </div>
 
-  <!-- المواقع المستثناة -->
+  <!-- Recent Downloads -->
   <div class="sec">
-    <div class="sec-title">المواقع المتجاهلة (Whitelist)</div>
+    <div class="sec-title">🕘 Recent Downloads</div>
+    <div class="recent-list" id="recentList">
+      <div class="empty-hint">No recent downloads sent via extension</div>
+    </div>
+  </div>
+
+  <!-- Ignored Sites Whitelist -->
+  <div class="sec">
+    <div class="sec-title">Ignored Sites (Whitelist)</div>
     <div class="row">
       <input type="text" id="newSite" placeholder="example.com" dir="ltr">
     </div>
-    <button class="btn-action" id="btnAddSite">＋ إضافة موقع</button>
+    <button class="btn-action" id="btnAddSite">＋ Add Site</button>
     <div class="tag-list" id="sitesList"></div>
   </div>
 

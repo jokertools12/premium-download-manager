@@ -33,7 +33,9 @@ export function wireRssUI() {
 export async function openRssModal() {
   const modal = $('#rssModal');
   if (!modal) return;
-  openModal(modal);
+  openModal('rssModal');
+  const list = $('#rssList');
+  if (list) list.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ Loading RSS feeds...</div>';
   renderRssList();
 }
 

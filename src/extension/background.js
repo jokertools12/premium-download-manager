@@ -1,12 +1,13 @@
 'use strict';
 
-/* Premium DM Extension v2.2.0 — اعتراض احترافي وحماية بدء التشغيل:
-   1) Startup Guard: منع قاطع للتنزيلات التلقائية غير المرغوبة عند فتح المتصفح.
-   2) إزالة الامتدادات الداخلية للمتصفحات (pak, bin, dat, dll).
-   3) استثناء نطاقات وخوادم التحديث الرسمية لـ Chrome و Edge و Firefox.
-   4) webRequest Blocking: اعتراض متزامن دقيق للروابط المباشرة.
-   5) Sniffer & Floating Widget: التقاط روابط الفيديو والبث HLS/M3U8 وتمريرها للتطبيق المكتبي.
-   6) كليك يمين: قائمة خيارات سريعة. */
+/* Premium DM Extension v4.0.0 — Professional Download Interception:
+   1) Startup Guard: Block unwanted auto-downloads on browser launch.
+   2) Exclude internal browser extensions (pak, bin, dat, dll).
+   3) Exclude official update domains for Chrome, Edge, and Firefox.
+   4) webRequest: Smart interception for direct download links.
+   5) Sniffer & Floating Widget: Capture video/HLS/M3U8 streams.
+   6) Right-click: Context menu quick options.
+   7) Daily Stats: Track download count and size per day. */
 
 const HOST = 'com.premiumdm.host';
 const EXT_BOOT_TIME = Date.now();
@@ -92,9 +93,15 @@ async function sendToApp(msg) {
 
   if (ok) {
     badge('✓');
-    chrome.storage.local.get({ recent: [] }, d => {
+    // Track daily stats
+    const today = new Date().toISOString().slice(0, 10);
+    chrome.storage.local.get({ dailyStats: {}, recent: [] }, d => {
+      const stats = d.dailyStats || {};
+      if (!stats[today]) stats[today] = { count: 0, bytes: 0 };
+      stats[today].count++;
+      if (msg.size && msg.size > 0) stats[today].bytes += msg.size;
       const recent = [{ url: msg.url, name: msg.filename || '', time: Date.now() }, ...(d.recent || [])].slice(0, 15);
-      chrome.storage.local.set({ recent });
+      chrome.storage.local.set({ dailyStats: stats, recent });
     });
   } else {
     badge('!', '#f87171');
@@ -159,8 +166,8 @@ chrome.webRequest.onBeforeRequest.addListener(details => {
     if (!ok) restoreBrowserDownload(url, filename);
   }).catch(() => restoreBrowserDownload(url, filename));
 
-  return { cancel: true };
-}, { urls: ['<all_urls>'] }, ['blocking']);
+  return {};
+}, { urls: ['<all_urls>'] }, []);
 
 /* ===== (2) رصد وسائط البث HLS/DASH والفيديو (Sniffer) ===== */
 const STREAM_URL_RE = /\.m3u8($|[?#])|\.mpd($|[?#])/i;
