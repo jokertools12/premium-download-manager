@@ -76,3 +76,51 @@ describe('فك الضغط التلقائي (ArchiveAutoExtractor)', () => {
     expect(resNotArchive).toBeNull();
   });
 });
+
+describe('التنظيف الذكي وخلاصات RSS (SmartCleanup & RSS)', () => {
+  it('يكتشف الملفات المكررة والمؤقتة بنجاح عبر SmartCleanup', async () => {
+    const scMod = await import('../../src/main/ai/SmartCleanup.js');
+    const SmartCleanup = scMod.default || scMod;
+
+    const fileA = path.join(tmpDir, 'duplicate-target.mp4');
+    fs.writeFileSync(fileA, '1234567890');
+    const tempFile = path.join(tmpDir, 'broken-stream.pdm-part');
+    fs.writeFileSync(tempFile, 'partial data');
+
+    const mockDb = {
+      getTasks: () => [
+        { id: 't1', filename: 'duplicate-target.mp4', filePath: fileA, status: 'completed', size: 10, ts: Date.now() - (40 * 86400000) },
+        { id: 't2', filename: 'duplicate-target.mp4', filePath: fileA, status: 'completed', size: 10, ts: Date.now() }
+      ],
+      getHistory: () => [],
+      getSettings: () => ({ downloadDir: tmpDir })
+    };
+
+    const sc = new SmartCleanup({ db: mockDb });
+    const res = sc.analyze(30);
+    expect(res.suggestions.length).toBeGreaterThanOrEqual(1);
+    expect(res.suggestions.some(s => s.reason === 'temp_leftover')).toBe(true);
+  });
+
+  it('يدير خلاصات RSS بنجاح دون أخطاء', async () => {
+    const rssMod = await import('../../src/main/integrations/RssFeedManager.js');
+    const RssFeedManager = rssMod.default || rssMod;
+
+    const settingsData = { rssFeeds: [] };
+    const mockDb = {
+      getSettings: () => settingsData,
+      updateSettings: (p) => { Object.assign(settingsData, p); return settingsData; }
+    };
+
+    const rss = new RssFeedManager({ engine: null, db: mockDb });
+    expect(rss.getFeeds()).toEqual([]);
+
+    const feed = rss.addFeed({ url: 'https://example.com/rss.xml', title: 'Test Feed' });
+    expect(feed.id).toBeTypeOf('string');
+    expect(rss.getFeeds().length).toBe(1);
+
+    rss.removeFeed(feed.id);
+    expect(rss.getFeeds().length).toBe(0);
+  });
+});
+

@@ -21,8 +21,14 @@ export function toast(msg, kind = '', actions = []) {
   setTimeout(() => el.remove(), actions && actions.length ? 8000 : 3500);
 }
 
-export function openModal(id) { $('#' + id).hidden = false; }
-export function closeModal(id) { $('#' + id).hidden = true; }
+export function openModal(target) {
+  const el = typeof target === 'string' ? (target.startsWith('#') ? $(target) : $('#' + target)) : target;
+  if (el) el.hidden = false;
+}
+export function closeModal(target) {
+  const el = typeof target === 'string' ? (target.startsWith('#') ? $(target) : $('#' + target)) : target;
+  if (el) el.hidden = true;
+}
 
 /* Theming متقدم (3.8): الوضع + لون التمييز المخصص + كثافة العرض */
 export function applyTheme(theme, accentColor, density) {

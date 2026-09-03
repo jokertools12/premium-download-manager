@@ -178,7 +178,18 @@
   <div id="cleanupModal" class="modal" hidden role="dialog" aria-modal="true">
     <div class="modal-card wide">
       <div class="modal-head"><h3>🧹 اقتراحات التنظيف الذكي للملفات</h3><button class="modal-x" data-close="cleanupModal">✕</button></div>
-      <div id="cleanupSummary" style="font-weight:600; color:#4f8cff; margin-bottom:10px;"></div>
+      <div class="row" style="margin-bottom:10px; justify-content:space-between; align-items:center;">
+        <div id="cleanupSummary" style="font-weight:600; color:#4f8cff;"></div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="cleanupDays" style="font-size:0.85rem; padding:4px 8px;">
+            <option value="7">أقدم من 7 أيام</option>
+            <option value="14">أقدم من 14 يوماً</option>
+            <option value="30" selected>أقدم من 30 يوماً</option>
+            <option value="1">فحص شامل (أقدم من يوم)</option>
+          </select>
+          <button id="btnRefreshCleanup" class="btn ghost" style="padding:4px 8px;" title="إعادة الفحص">🔄</button>
+        </div>
+      </div>
       <div id="cleanupList" style="max-height:320px; overflow-y:auto;"></div>
       <div class="modal-foot">
         <button class="btn ghost" data-close="cleanupModal">إلغاء</button>

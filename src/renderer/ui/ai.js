@@ -40,33 +40,47 @@ export function wireAiUI() {
   // 2. زر فتح نافذة التنظيف الذكي
   const btnCleanup = $('#btnOpenCleanup');
   if (btnCleanup) {
-    btnCleanup.addEventListener('click', openCleanupModal);
+    btnCleanup.addEventListener('click', () => openCleanupModal());
   }
 
   const btnDoCleanup = $('#btnDoCleanup');
   if (btnDoCleanup) {
     btnDoCleanup.addEventListener('click', executeSelectedCleanup);
   }
+
+  const daysSelect = $('#cleanupDays');
+  if (daysSelect) {
+    daysSelect.addEventListener('change', () => openCleanupModal(Number(daysSelect.value)));
+  }
+
+  const btnRefresh = $('#btnRefreshCleanup');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      const d = ($('#cleanupDays') && Number($('#cleanupDays').value)) || 30;
+      openCleanupModal(d);
+    });
+  }
 }
 
-export async function openCleanupModal() {
+export async function openCleanupModal(days = null) {
   const modal = $('#cleanupModal');
   const list = $('#cleanupList');
   const summary = $('#cleanupSummary');
   if (!modal || !list) return;
 
+  const targetDays = days !== null ? days : (($('#cleanupDays') && Number($('#cleanupDays').value)) || 30);
   list.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">⏳ جاري فحص الملفات القديمة والمؤقتة والمكررة...</div>';
-  openModal(modal);
+  openModal('cleanupModal');
 
   try {
-    const res = await window.pdm.ai.suggestCleanup(30);
+    const res = await window.pdm.ai.suggestCleanup(targetDays);
     const suggestions = (res && res.suggestions) || [];
     if (summary) {
       summary.textContent = `المساحة المقترح تحريرها: ${fmtBytes(res.totalReclaimableBytes || 0)} (${suggestions.length} ملف)`;
     }
 
     if (suggestions.length === 0) {
-      list.innerHTML = '<div style="text-align:center; padding:20px; color:#4ade80;">✨ ممتاز! لا توجد ملفات مهملة أو مكررة للتنظيف.</div>';
+      list.innerHTML = '<div style="text-align:center; padding:20px; color:#4ade80;">✨ ممتاز! لا توجد ملفات مهملة أو مكررة في هذه الفترة.</div>';
       if ($('#btnDoCleanup')) $('#btnDoCleanup').disabled = true;
       return;
     }

@@ -265,7 +265,17 @@ async function promptVersion(currentVer) {
   const currentVer = getPkg().version || '3.5.0';
   let targetVer = (process.argv[2] || '').trim();
 
-  if (!targetVer) {
+  if (targetVer === '-h' || targetVer === '--help') {
+    console.log(`
+${C.bold}طريقة الاستخدام:${C.reset}
+  upload.bat                 تشغيل المعالج التفاعلي لاختيار ونشر الإصدار
+  upload.bat 3.5.1           نشر إصدار برقم محدد مباشرة
+  upload.bat --help          عرض تعليمات الاستخدام
+`);
+    process.exit(0);
+  }
+
+  if (!targetVer || !/^\d+\.\d+\.\d+/.test(targetVer)) {
     targetVer = await promptVersion(currentVer);
   }
 
