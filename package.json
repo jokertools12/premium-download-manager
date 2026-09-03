@@ -42,6 +42,7 @@
       "node_modules/webtorrent/**"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "zip",
@@ -71,8 +72,16 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Premium Download Manager",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "runAfterFinish": true,
       "include": "build/installer.nsh",
-      "artifactName": "PremiumDM-Setup-${version}.${ext}"
+      "artifactName": "PremiumDM-Setup-${version}.${ext}",
+      "installerLanguages": ["ar_SA", "en_US"]
     },
     "portable": {
       "artifactName": "PremiumDM-PortableSingle-${version}.${ext}"

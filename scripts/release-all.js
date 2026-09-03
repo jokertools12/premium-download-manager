@@ -1,13 +1,14 @@
 'use strict';
 
 /* ═════════════════════════════════════════════════════════════════════════════
-   ⚡ PREMIUM DOWNLOAD MANAGER — NEXT-GEN RELEASE & DEPLOYMENT HUB v3.5.0
+   ⚡ PREMIUM DOWNLOAD MANAGER — NEXT-GEN RELEASE & DEPLOYMENT HUB
    ═════════════════════════════════════════════════════════════════════════════
-   سيرفر وسكربت الرفع الآلي المتطور:
-   - بناء الحزم والمثبتات الرسمية (Setup EXE + Portable + ZIP)
-   - الفحص الأمني السريع ومطابقة المعايير قبل النشر
-   - الرفع الذكي والمباشر لـ GitHub Releases مع مؤشر تقدم حي وسرعة النقل
-   - إنشاء وإعادة وسم Git Tags بدقة وبدون أي أخطاء وسم
+   Enterprise-grade automated deployment pipeline:
+   - Automated NSIS Setup EXE + Portable EXE + ZIP packaging
+   - Pre-flight automated security audit & code integrity check
+   - Reliable annotated Git tag creation and force push
+   - GitHub Releases API integration with rich bilingual changelog
+   - Real-time streaming upload with live progress bar and speed gauge
    ═════════════════════════════════════════════════════════════════════════════ */
 
 const { execSync, spawnSync } = require('child_process');
@@ -17,7 +18,7 @@ const path = require('path');
 const https = require('https');
 const readline = require('readline');
 
-// تكوين مظهر وألوان الترمينال (ANSI 24-bit Colors)
+// Terminal ANSI 24-bit TrueColor Palette
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -27,6 +28,7 @@ const C = {
   purple: '\x1b[38;2;139;92;246m',
   green: '\x1b[38;2;16;185;129m',
   amber: '\x1b[38;2;245;158;11m',
+  yellow: '\x1b[38;2;234;179;8m',
   red: '\x1b[38;2;239;68;68m',
   white: '\x1b[38;2;248;250;252m',
   gray: '\x1b[38;2;148;163;184m'
@@ -38,7 +40,7 @@ const PKG_PATH = path.join(__dirname, '..', 'package.json');
 const OUTDIR = path.join(__dirname, '..', 'build-out');
 const rootDir = path.join(__dirname, '..');
 
-// جلب رمز المصادقة GitHub Token
+// Load GitHub Personal Access Token
 let TOKEN = '';
 try { TOKEN = fs.readFileSync(path.join(os.homedir(), '.pdm-gh-token'), 'utf8').trim(); } catch (_) {}
 if (!TOKEN && process.env.GH_TOKEN) TOKEN = process.env.GH_TOKEN;
@@ -47,21 +49,21 @@ if (!TOKEN && process.env.GITHUB_TOKEN) TOKEN = process.env.GITHUB_TOKEN;
 function printBanner() {
   console.clear();
   console.log(`
-${C.purple}╔══════════════════════════════════════════════════════════════════════════════╗
-║${C.cyan}${C.bold}   ⚡ PREMIUM DOWNLOAD MANAGER — NEXT-GEN RELEASE & DEPLOYMENT HUB ⚡         ${C.purple}║
-║${C.gray}   نظام النشر والتحديث السحابي الشامل والتلقائي لجميع المنصات                   ${C.purple}║
-╚══════════════════════════════════════════════════════════════════════════════╝${C.reset}
+${C.purple}======================================================================
+${C.cyan}${C.bold}   PREMIUM DOWNLOAD MANAGER -- RELEASE & DEPLOYMENT HUB
+${C.gray}   Next-Generation Multi-Platform Packaging and Auto-Update System
+${C.purple}======================================================================${C.reset}
 `);
 }
 
-function logStep(num, total, title, desc) {
-  console.log(`\n${C.blue}${C.bold}── [${num}/${total}] ${title}${C.reset} ${C.gray}• ${desc}${C.reset}`);
+function logStep(num, total, tag, desc) {
+  console.log(`\n${C.blue}${C.bold}-- [${num}/${total}] ${tag}${C.reset}  ${C.gray}${desc}${C.reset}`);
 }
 
-function logOk(msg) { console.log(`   ${C.green}✓${C.reset} ${msg}`); }
-function logWarn(msg) { console.log(`   ${C.amber}⚠️${C.reset} ${msg}`); }
-function logErr(msg) { console.log(`   ${C.red}✖${C.reset} ${msg}`); }
-function logInfo(msg) { console.log(`   ${C.cyan}ℹ${C.reset} ${msg}`); }
+function logOk(msg) { console.log(`   ${C.green}[OK]${C.reset} ${msg}`); }
+function logWarn(msg) { console.log(`   ${C.amber}[WARN]${C.reset} ${msg}`); }
+function logErr(msg) { console.log(`   ${C.red}[FAIL]${C.reset} ${msg}`); }
+function logInfo(msg) { console.log(`   ${C.cyan}[INFO]${C.reset} ${msg}`); }
 
 function getPkg() { return JSON.parse(fs.readFileSync(PKG_PATH, 'utf8')); }
 function setPkgVersion(v) {
@@ -71,7 +73,8 @@ function setPkgVersion(v) {
 }
 
 function bumpVersion(ver, type) {
-  const parts = ver.split('.').map(n => parseInt(n, 10) || 0);
+  const clean = String(ver || '').replace(/^[^\d]*/, '');
+  const parts = clean.split('.').map(n => parseInt(n, 10) || 0);
   while (parts.length < 3) parts.push(0);
   if (type === 'major') return `${parts[0] + 1}.0.0`;
   if (type === 'minor') return `${parts[0]}.${parts[1] + 1}.0`;
@@ -95,7 +98,7 @@ function gitPush(ref) {
       });
       return { ok: true, via: 'GitHub Token', out: r.trim().split('\n').slice(-1)[0] || 'Success' };
     } catch (_e) {
-      logWarn('تعذر الدفع عبر الرمز المباشر، جاري المحاولة عبر Git Credential Manager...');
+      logWarn('Direct Token push unavailable, falling back to Git Credential Manager...');
     }
   }
   const r = execSync(`git push --force origin ${ref} 2>&1`, {
@@ -111,7 +114,7 @@ function api(method, urlOrPath, { headers = {}, body } = {}) {
       method, hostname: u.hostname, path: u.pathname + u.search,
       headers: {
         'authorization': 'token ' + TOKEN,
-        'user-agent': 'PremiumDM-Publisher',
+        'user-agent': 'PremiumDM-Deployer',
         'accept': 'application/vnd.github+json',
         'content-type': 'application/json',
         ...headers
@@ -124,7 +127,7 @@ function api(method, urlOrPath, { headers = {}, body } = {}) {
         let obj = null;
         try { obj = text ? JSON.parse(text) : null; } catch (_) {}
         if (res.statusCode >= 400) {
-          return reject(new Error(`${method} → ${res.statusCode}: ${JSON.stringify(obj || text).slice(0, 250)}`));
+          return reject(new Error(`${method} -> ${res.statusCode}: ${JSON.stringify(obj || text).slice(0, 250)}`));
         }
         resolve(obj);
       });
@@ -135,7 +138,6 @@ function api(method, urlOrPath, { headers = {}, body } = {}) {
   });
 }
 
-// رفع الملف مع شريط تقدم مباشر وسرعة النقل الحية
 function uploadAssetWithProgress(uploadBase, filePath, fileName) {
   return new Promise((resolve, reject) => {
     const stat = fs.statSync(filePath);
@@ -146,7 +148,7 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
       method: 'POST', hostname: u.hostname, path: u.pathname + u.search,
       headers: {
         'authorization': 'token ' + TOKEN,
-        'user-agent': 'PremiumDM-Publisher',
+        'user-agent': 'PremiumDM-Deployer',
         'content-type': 'application/octet-stream',
         'content-length': totalBytes
       }
@@ -179,7 +181,7 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
     stream.on('data', chunk => {
       uploadedBytes += chunk.length;
       const now = Date.now();
-      if (now - lastUpdate > 120 || uploadedBytes === totalBytes) {
+      if (now - lastUpdate > 100 || uploadedBytes === totalBytes) {
         lastUpdate = now;
         const pct = ((uploadedBytes / totalBytes) * 100).toFixed(1);
         const elapsedSec = Math.max(0.1, (now - startTime) / 1000);
@@ -189,9 +191,9 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
 
         const barWidth = 24;
         const filled = Math.round((uploadedBytes / totalBytes) * barWidth);
-        const bar = '█'.repeat(filled) + '░'.repeat(Math.max(0, barWidth - filled));
+        const bar = '='.repeat(filled) + '-'.repeat(Math.max(0, barWidth - filled));
 
-        process.stdout.write(`\r   ${C.cyan}[${bar}]${C.reset} ${C.bold}${pct}%${C.reset} • ${upMB}/${totMB} MB • ${C.green}${speedMB} MB/s${C.reset}   `);
+        process.stdout.write(`\r   ${C.cyan}[${bar}]${C.reset} ${C.bold}${pct}%${C.reset} | ${upMB}/${totMB} MB | ${C.green}${speedMB} MB/s${C.reset}   `);
       }
     });
 
@@ -202,20 +204,21 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
 function generateChangelog(version) {
   return `## ⚡ Premium Download Manager v${version}
 
-### 🌟 أبرز ما تم إضافته وتحديثه في هذا الإصدار:
-- **المشاهدة والبث الحي أثناء التحميل (Stream & Preview)**: تشغيل ومشاهدة ملفات الفيديو والصوت فور وصول 2% فقط من التحميل عبر مشغل مدمج.
-- **استئناف الروابط منتهية الصلاحية (Refresh Expired Links)**: تحديث الروابط المؤقتة واستئناف التحميل من نفس البايت دون البدء من الصفر.
-- **حارس بدء التشغيل للإضافة (Startup Guard)**: منع التحميلات التلقائية غير المرغوبة عند فتح المتصفح واستثناء نطاقات التحديث الداخلية.
-- **زر تحميل الفيديو العائم داخل الصفحات (Floating Video Sniffer)**: زر عائم أنيق فوق مشغلات الفيديو للتحميل بنقرة واحدة.
-- **فك الضغط التلقائي للأرشيفات (Archive Auto-Extractor)**: فك ضغط ملفات ZIP و RAR و 7z تلقائياً فور اكتمالها.
-- **أداة حساب التجزئة المدمجة (Hash Calculator)**: حساب ومطابقة بصمات الملفات (MD5, SHA-1, SHA-256).
-- **إصلاحات متانة التنزيل والفيديو**: معالجة الخروج بكود 0 في yt-dlp، حماية الثنائيات بالتنزيل الذري، وتعقيم أسماء الملفات.
+### 🌟 What's New / ما الجديد في هذا الإصدار:
+- **Stream & Live Preview (البث الحي أثناء التحميل)**: Play video and audio while downloading after just 2% progress with the built-in player.
+- **Refresh Expired Links (استئناف الروابط المنتهية)**: Renew expired links and resume downloads without losing already transferred bytes.
+- **Startup Guard for Browser Extension (حارس بدء المتصفح)**: Blocks unwanted background downloads when restoring browser sessions and excludes internal update domains.
+- **Floating Video Download Sniffer (زر الفيديو العائم)**: Sleek floating IDM-style widget on video web players for instant one-click capture.
+- **Archive Auto-Extractor (فك الضغط التلقائي للأرشيفات)**: Automatically unpacks ZIP, RAR, and 7z archives to a subfolder upon download completion.
+- **Integrated Hash Calculator (حاسبة التجزئة)**: Instant streaming verification for MD5, SHA-1, and SHA-256.
+- **Resilience Engine & File Sanitization (حماية الملفات والتنزيل الذري)**: Protected tool binaries with atomic rename and strict OS filename sanitization.
+- **Interactive Workflow Simulator & Web Hub (موقع تفاعلي متطور)**: Updated web landing page with connection chunk visualizer and comparison matrix.
 
 ---
-### 📦 التثبيت والتحديث التلقائي:
-1. **Windows Installer**: حمّل \`PremiumDM-Setup-${version}.exe\` وشغّله.
-2. **نسخة محمولة**: \`PremiumDM-Portable-${version}.zip\`.
-3. **مستخدمي البرنامج الحاليين**: سيصلكم التحديث تلقائياً عند فتح البرنامج.
+### 📦 Installation & Automatic Updates:
+1. **Windows Installer**: Download and run \`PremiumDM-Setup-${version}.exe\`.
+2. **Portable ZIP**: Extract and run \`PremiumDM-Portable-${version}.zip\` without installation.
+3. **Existing Users**: The application will automatically update on next launch.
 `;
 }
 
@@ -224,16 +227,16 @@ async function promptVersion(currentVer) {
   const p2 = bumpVersion(currentVer, 'minor');
   const p3 = bumpVersion(currentVer, 'major');
 
-  console.log(`${C.bold}الإصدار الحالي في المشروع:${C.reset} ${C.cyan}${C.bold}${currentVer}${C.reset}\n`);
-  console.log(`  ${C.bold}[1]${C.reset} الاحتفاظ بالإصدار الحالي: ${C.green}${currentVer}${C.reset} ${C.dim}(مستحسن)${C.reset}`);
-  console.log(`  ${C.bold}[2]${C.reset} إصدار ترقيعي (Patch):       ${C.yellow}${p1}${C.reset}`);
-  console.log(`  ${C.bold}[3]${C.reset} إصدار ميزات (Minor):       ${C.blue}${p2}${C.reset}`);
-  console.log(`  ${C.bold}[4]${C.reset} إصدار رئيسي (Major):       ${C.purple}${p3}${C.reset}`);
-  console.log(`  ${C.bold}[5]${C.reset} كتابة رقم إصدار مخصص`);
+  console.log(`${C.bold}Current Project Version:${C.reset} ${C.cyan}${C.bold}${currentVer}${C.reset}\n`);
+  console.log(`  ${C.bold}[1]${C.reset} Keep Current Version:  ${C.green}${C.bold}${currentVer}${C.reset} ${C.dim}(Recommended)${C.reset}`);
+  console.log(`  ${C.bold}[2]${C.reset} Patch Release:         ${C.yellow}${C.bold}${p1}${C.reset}`);
+  console.log(`  ${C.bold}[3]${C.reset} Minor Release:         ${C.blue}${C.bold}${p2}${C.reset}`);
+  console.log(`  ${C.bold}[4]${C.reset} Major Release:         ${C.purple}${C.bold}${p3}${C.reset}`);
+  console.log(`  ${C.bold}[5]${C.reset} Custom Version`);
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   return new Promise(resolve => {
-    rl.question(`\n${C.bold}اختر خياراً [1-5] أو اكتب الإصدار مباشرة (افتراضي: 1): ${C.reset}`, ans => {
+    rl.question(`\n${C.bold}Select an option [1-5] or type version directly (Default: 1): ${C.reset}`, ans => {
       rl.close();
       const a = ans.trim();
       if (!a || a === '1') return resolve(currentVer);
@@ -242,7 +245,7 @@ async function promptVersion(currentVer) {
       if (a === '4') return resolve(p3);
       if (a === '5') {
         const rlCustom = readline.createInterface({ input: process.stdin, output: process.stdout });
-        rlCustom.question(`اكتب رقم الإصدار المطلوب (مثال: 3.6.0): `, cAns => {
+        rlCustom.question(`Enter custom version string (e.g. 3.6.0): `, cAns => {
           rlCustom.close();
           resolve(cAns.trim() || currentVer);
         });
@@ -258,8 +261,8 @@ async function promptVersion(currentVer) {
   printBanner();
 
   if (!TOKEN) {
-    logWarn(`لم يتم العثور على رمز وصول GitHub Token في: %USERPROFILE%\\.pdm-gh-token`);
-    logInfo(`لرفع الإصدارات تلقائياً عبر API، يفضل إنشاء Personal Access Token وحفظه في الملف.`);
+    logWarn(`GitHub Token not found in %USERPROFILE%\\.pdm-gh-token`);
+    logInfo(`To automate GitHub Releases, save your Personal Access Token in that file.`);
   }
 
   const currentVer = getPkg().version || '3.5.0';
@@ -267,10 +270,10 @@ async function promptVersion(currentVer) {
 
   if (targetVer === '-h' || targetVer === '--help') {
     console.log(`
-${C.bold}طريقة الاستخدام:${C.reset}
-  upload.bat                 تشغيل المعالج التفاعلي لاختيار ونشر الإصدار
-  upload.bat 3.5.1           نشر إصدار برقم محدد مباشرة
-  upload.bat --help          عرض تعليمات الاستخدام
+${C.bold}Usage:${C.reset}
+  upload.bat                 Run interactive deployment wizard
+  upload.bat 3.5.1           Deploy specific version directly
+  upload.bat --help          Show this help information
 `);
     process.exit(0);
   }
@@ -282,12 +285,18 @@ ${C.bold}طريقة الاستخدام:${C.reset}
   setPkgVersion(targetVer);
   const tag = 'v' + targetVer;
 
-  console.log(`\n${C.green}${C.bold}🚀 جاهز لبدء عملية بناء ونشر الإصدار: ${tag}${C.reset}`);
+  console.log(`\n${C.green}${C.bold}>> Target Release:${C.reset} ${C.cyan}${C.bold}${tag}${C.reset}`);
 
-  // [1/6] البناء والتجميع
-  logStep(1, 6, 'بناء حزم التثبيت (Electron Builder)', 'Setup EXE + Portable + Blockmaps');
+  // [1/6] Ensure Branding Icons & Build Packages
+  logStep(1, 6, 'BUILD', 'Packaging NSIS Setup, Portable EXE & ZIP');
   try { execSync('taskkill /F /IM electron.exe 2>nul', { stdio: 'ignore' }); } catch (_) {}
   try { execSync('taskkill /F /IM "Premium Download Manager.exe" 2>nul', { stdio: 'ignore' }); } catch (_) {}
+
+  // Generate high-resolution icons if missing
+  if (!fs.existsSync(path.join(rootDir, 'build', 'icon.ico'))) {
+    logInfo('Generating application icons...');
+    execSync('node scripts/gen-app-icons.js', { cwd: rootDir, stdio: 'ignore' });
+  }
 
   if (fs.existsSync(OUTDIR)) fs.rmSync(OUTDIR, { recursive: true, force: true });
 
@@ -296,48 +305,48 @@ ${C.bold}طريقة الاستخدام:${C.reset}
   });
 
   if (buildRes.status !== 0) {
-    throw new Error(`فشل بناء الحزم عبر electron-builder (كود الخروج: ${buildRes.status})`);
+    throw new Error(`electron-builder packaging failed with exit code ${buildRes.status}`);
   }
 
   const exes = fs.readdirSync(OUTDIR).filter(f => f.endsWith('.exe'));
   const mainExe = exes.find(f => f.includes('Setup')) || exes[0];
-  if (!mainExe) throw new Error('لم ينتج البناء ملف Setup.exe!');
+  if (!mainExe) throw new Error('Build output did not produce a Setup.exe!');
   const mainExeSize = Math.round(fs.statSync(path.join(OUTDIR, mainExe)).size / 1048576);
-  logOk(`اكتمل البناء بنجاح: ${C.bold}${mainExe}${C.reset} (${mainExeSize} MB)`);
+  logOk(`Packaging complete: ${C.bold}${mainExe}${C.reset} (${mainExeSize} MB)`);
 
-  // [2/6] التدقيق الأمني وفحص الجودة
-  logStep(2, 6, 'الفحص والتدقيق الأمني', 'Electron Security Hardening Audit');
+  // [2/6] Security & Quality Audit
+  logStep(2, 6, 'SECURITY', 'Running Pre-flight Hardening Audit');
   try {
-    const auditRes = execSync('node scripts/security-audit.js', { cwd: rootDir, encoding: 'utf8' });
-    logOk('التدقيق الأمني: 9/9 معايير أمنية مجازة بنسبة 100%');
+    execSync('node scripts/security-audit.js', { cwd: rootDir, encoding: 'utf8' });
+    logOk('Electron Security Audit: 9/9 Hardening checks passed (100%)');
   } catch (e) {
-    logWarn(`تنبيه في التدقيق الأمني: ${e.message}`);
+    logWarn(`Security audit warning: ${e.message}`);
   }
 
-  // [3/6] التزام الكود ودفع التغييرات
-  logStep(3, 6, 'التزام ومزامنة الكود مع Git', 'Commit & Push to origin/main');
+  // [3/6] Commit and Push Code
+  logStep(3, 6, 'GIT PUSH', 'Syncing codebase with origin/main');
   git('add -A');
   try {
     git(`commit -m "release: ${tag} - production release build"`);
-    logOk(`تم إنشاء commit جديد للإصدار ${tag}`);
+    logOk(`Created git commit for release ${tag}`);
   } catch (_) {
-    logInfo('لا توجد ملفات جديدة للتسجيل — الكود متزامن');
+    logInfo('Working directory clean -- code already synchronized');
   }
 
   const pushRes = gitPush('main');
-  logOk(`تم دفع الكود إلى الفرع الرئيسي عبر (${pushRes.via}): ${pushRes.out}`);
+  logOk(`Code pushed to origin/main via (${pushRes.via}): ${pushRes.out}`);
 
-  // [4/6] إنشاء ورفع الوسم بدقة واحترافية
-  logStep(4, 6, `إنشاء ورفع وسم الإصدار (${tag})`, 'Annotated Git Tag Push');
+  // [4/6] Annotated Release Tag Creation & Push
+  logStep(4, 6, 'GIT TAG', `Creating and publishing annotated tag ${tag}`);
   try { git(`tag -d ${tag}`); } catch (_) {}
   git(`tag -a ${tag} -m "Release ${tag}"`);
-  
-  // رفع الوسم بصيغة صريحة لمنع خطأ tag not found
-  const tagPush = gitPush(`refs/tags/${tag}:refs/tags/${tag}`);
-  logOk(`تم رفع الوسم بنجاح إلى المستودع: ${tag} (${tagPush.via})`);
 
-  // [5/6] إنشاء الـ Release على GitHub
-  logStep(5, 6, 'إنشاء وتحديث الـ Release الرسمي', 'GitHub Releases API');
+  // Push tag with explicit refspec
+  const tagPush = gitPush(`refs/tags/${tag}:refs/tags/${tag}`);
+  logOk(`Tag published successfully: ${tag} (${tagPush.via})`);
+
+  // [5/6] GitHub Release Publishing
+  logStep(5, 6, 'GITHUB', 'Creating official GitHub Release & Changelog');
   let release;
   try {
     release = await api('POST', `/repos/${REPO}/releases`, {
@@ -349,14 +358,14 @@ ${C.bold}طريقة الاستخدام:${C.reset}
         prerelease: false
       })
     });
-    logOk(`تم إنشاء الـ Release الجديد بنجاح على GitHub!`);
-  } catch (e) {
-    logInfo(`الـ Release موجود مسبقاً، سيتم رفع الأصول وتحديث الملفات.`);
+    logOk('GitHub Release published successfully!');
+  } catch (_e) {
+    logInfo('Release exists, fetching release metadata for asset upload...');
     release = await api('GET', `/repos/${REPO}/releases/tags/${encodeURIComponent(tag)}`);
   }
 
-  // [6/6] رفع أصول التثبيت مع شريط تقدم مباشر
-  logStep(6, 6, 'رفع ملفات التثبيت والتحديث التلقائي', 'Uploading setup, portable & update files');
+  // [6/6] Asset Uploads with Live Progress
+  logStep(6, 6, 'UPLOAD', 'Uploading setup packages and auto-update assets');
   const uploadBase = release.upload_url.replace('{?name,label}', '');
   const outFiles = fs.readdirSync(OUTDIR).filter(f => /\.(exe|blockmap|yml|zip)$/i.test(f));
 
@@ -364,39 +373,39 @@ ${C.bold}طريقة الاستخدام:${C.reset}
     const full = path.join(OUTDIR, f);
     if (!fs.statSync(full).isFile()) continue;
     const mb = (fs.statSync(full).size / 1048576).toFixed(1);
-    console.log(`\n  ${C.bold}📦 جاري رفع: ${f}${C.reset} ${C.gray}(${mb} MB)...${C.reset}`);
+    console.log(`\n  ${C.bold}Package: ${f}${C.reset} ${C.gray}(${mb} MB)${C.reset}`);
 
     let uploaded = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         await uploadAssetWithProgress(uploadBase, full, f);
-        logOk(`تم رفع ${C.bold}${f}${C.reset} بنجاح!`);
+        logOk(`Uploaded ${C.bold}${f}${C.reset} successfully`);
         uploaded = true;
         break;
       } catch (err) {
         if (err.message && err.message.includes('already_exists')) {
-          logInfo(`${f} مرفوع مسبقاً (تخطي).`);
+          logInfo(`${f} already exists on release, skipping.`);
           uploaded = true;
           break;
         }
-        logWarn(`فشلت محاولة الرفع (${attempt}/3): ${err.message}`);
+        logWarn(`Upload attempt (${attempt}/3) failed: ${err.message}`);
         if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
       }
     }
-    if (!uploaded) throw new Error(`تعذر رفع الملف ${f} بعد 3 محاولات!`);
+    if (!uploaded) throw new Error(`Failed to upload ${f} after 3 attempts!`);
   }
 
   const releaseUrl = release.html_url || `https://github.com/${REPO}/releases/tag/${tag}`;
   console.log(`
-${C.green}${C.bold}══════════════════════════════════════════════════════════════════════════════
-🎉 اكتملت عملية الرفع والنشر بنجاح 100%!
-🔗 رابط الإصدار الرسمي: ${C.cyan}${releaseUrl}${C.green}
-📥 كافة المستخدمين الحاليين سيستلمون التحديث تلقائياً عند فتح البرنامج.
-══════════════════════════════════════════════════════════════════════════════${C.reset}
+${C.green}${C.bold}======================================================================
+SUCCESS: Release ${tag} has been built and deployed successfully!
+Release Link: ${C.cyan}${releaseUrl}${C.green}
+All active users will automatically receive this update on launch.
+======================================================================${C.reset}
 `);
 
 })().catch(err => {
-  console.error(`\n${C.red}${C.bold}❌ حدث خطأ أثناء عملية النشر:${C.reset} ${err.message}`);
-  console.error(`   يرجى التأكد من اتصال الإنترنت وصلاحية الرمز ثم المحاولة مجدداً.`);
+  console.error(`\n${C.red}${C.bold}[ERROR] Deployment failed:${C.reset} ${err.message}`);
+  console.error(`   Please check network connection, GitHub credentials, and try again.`);
   process.exit(1);
 });

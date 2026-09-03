@@ -2,7 +2,7 @@
 setlocal
 chcp 65001 >nul
 cd /d "%~dp0"
-title "Premium Download Manager - Release Hub"
+title Premium Download Manager - Release Hub
 
 node scripts\release-all.js %*
 
