@@ -478,6 +478,13 @@ function setupIpc({
         });
         return r.canceled ? null : r.filePaths[0];
       }
+      case 'clipboard:write': {
+        const { clipboard } = require('electron');
+        if (payload && typeof payload.text === 'string') {
+          clipboard.writeText(payload.text);
+        }
+        return true;
+      }
       case 'showInFolder': {
         const id1 = (payload || {}).id;
         const t1 = engine.get(id1) || (video && video.get(id1)) || (torrent && torrent.get(id1));

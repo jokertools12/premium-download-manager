@@ -83,6 +83,11 @@ function buildYtDlpArgs(task) {
   /* استخراج صوت MP3 (4.1/4.3) — يتطلب ffmpeg */
   if (audio) args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
 
+  /* ضمان توافق الصوت 100% مع مشغلات ويندوز: ترميز صوت AAC ستيريو قياسي بدلاً من Opus غير المدعوم */
+  if (!audio && validMerge && merge === 'mp4') {
+    args.push('--postprocessor-args', 'Merger:-c:v copy -c:a aac -b:a 192k');
+  }
+
   /* الترجمات التلقائية (4.6) */
   if (task.subtitles) {
     args.push('--write-subs', '--write-auto-subs', '--sub-langs', task.subsLangs || DEFAULT_SUBS);

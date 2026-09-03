@@ -4,11 +4,11 @@ import { $, toast, openModal, closeModal } from '../../lib/dom.js';
 
 let currentTask = null;
 
-export function openTranscodeModal(task) {
-  currentTask = task;
-  const fp = task.filePath || '';
+export function openTranscodeModal(task = {}) {
+  currentTask = task || {};
+  const fp = (task && task.filePath) || '';
   $('#transcodeSource').value = fp;
-  $('#transcodeSourceDisplay').textContent = task.filename || fp;
+  $('#transcodeSourceDisplay').textContent = (task && (task.filename || fp)) || '(لم يتم اختيار ملف — اضغط استعراض)';
   $('#transcodeProgress').hidden = true;
   $('#btnStartTranscode').disabled = false;
   openModal('#transcodeModal');
@@ -42,7 +42,10 @@ export function wireTranscodeModal() {
   };
 
   $('#btnStartTranscode').onclick = async () => {
-    if (!currentTask || !currentTask.filePath) return;
+    if (!currentTask || !currentTask.filePath) {
+      toast('يرجى اختيار ملف أولاً بالضغط على زر استعراض', 'warn');
+      return;
+    }
     const type = $('#transcodeType').value;
     const source = currentTask.filePath;
     const dir = source.replace(/[/\\][^/\\]+$/, '');

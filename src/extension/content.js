@@ -30,17 +30,25 @@ function showPageToast(text, ok = true) {
 }
 
 function getBestMediaUrl(videoEl) {
-  if (videoEl.currentSrc && !videoEl.currentSrc.startsWith('blob:')) {
+  const host = (window.location.hostname || '').toLowerCase();
+  const isVideoPlatform = host.includes('youtube.com') || host.includes('youtu.be') ||
+    host.includes('tiktok.com') || host.includes('facebook.com') || host.includes('fb.watch') ||
+    host.includes('instagram.com') || host.includes('twitter.com') || host.includes('x.com') ||
+    host.includes('vimeo.com') || host.includes('dailymotion.com');
+  if (isVideoPlatform) {
+    return window.location.href;
+  }
+  if (videoEl.currentSrc && !videoEl.currentSrc.startsWith('blob:') && !videoEl.currentSrc.includes('googlevideo.com')) {
     return videoEl.currentSrc;
   }
-  if (videoEl.src && !videoEl.src.startsWith('blob:')) {
+  if (videoEl.src && !videoEl.src.startsWith('blob:') && !videoEl.src.includes('googlevideo.com')) {
     return videoEl.src;
   }
   const sources = videoEl.querySelectorAll('source');
   for (const s of sources) {
-    if (s.src && !s.src.startsWith('blob:')) return s.src;
+    if (s.src && !s.src.startsWith('blob:') && !s.src.includes('googlevideo.com')) return s.src;
   }
-  // لمواقع مثل YouTube / Twitter / TikTok نرسل رابط الصفحة لتتولى yt-dlp المعالجة
+  // لمواقع الفيديو نرسل رابط الصفحة دائماً لتتولى أداة التحميل المعالجة الكاملة مع الصوت
   return window.location.href;
 }
 

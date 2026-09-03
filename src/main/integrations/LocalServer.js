@@ -72,12 +72,13 @@ class LocalServer {
             res.end(JSON.stringify({ ok: false, error: 'رابط الفيديو مطلوب' }));
             return;
           }
-          if (!this.video || typeof this.video.getFormats !== 'function') {
+          const probeFn = this.video ? (this.video.getFormats || this.video.probe) : null;
+          if (!probeFn) {
             res.writeHead(503, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'محرك الفيديو غير متاح' }));
             return;
           }
-          this.video.getFormats(videoUrl).then(info => {
+          probeFn.call(this.video, videoUrl).then(info => {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, formats: info.formats || [], title: info.title || '' }));
           }).catch(err => {
@@ -248,7 +249,7 @@ class LocalServer {
         // مسار ping & status & summary للتكامل التام مع إضافة المتصفح
         if (pathname === '/ping') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '7.0.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '7.1.0' }));
           return;
         }
 
@@ -264,7 +265,7 @@ class LocalServer {
             running: true,
             connected: true,
             app: 'PremiumDM',
-            version: this.version || '7.0.0',
+            version: this.version || '7.1.0',
             speed: totalSpeed,
             totalSpeed,
             active: activeCount,

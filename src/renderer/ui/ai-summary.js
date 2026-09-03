@@ -2,18 +2,33 @@
 
 import { $, toast, openModal, closeModal } from '../../lib/dom.js';
 
-export async function openAiSummaryModal(task) {
-  if (!task || !task.filePath) return;
+export async function openAiSummaryModal(task = {}) {
   const modal = $('#aiSummaryModal');
   if (!modal) return;
 
-  $('#aiSummaryTitle').textContent = task.filename || task.title || 'ملخص المحتوى';
-  $('#aiSummaryLoading').hidden = false;
-  $('#aiSummaryContent').hidden = true;
+  const fp = (task && task.filePath) || '';
+  $('#aiSummaryTitle').textContent = (task && (task.filename || task.title)) || 'مساعد الذكاء الاصطناعي لتلخيص المحتوى';
   openModal('#aiSummaryModal');
 
+  if (!fp) {
+    $('#aiSummaryLoading').hidden = true;
+    $('#aiSummaryContent').hidden = false;
+    $('#aiSummaryOverview').textContent = '💡 مرحباً بك في مساعد الذكاء الاصطناعي! يمكنك تلخيص أي ملف وسائط أو ترجمة أو مستند موجود على جهازك، أو الضغط على زر التلخيص المباشر 💡 في بطاقة أي تحميل مكتمل.';
+    const pointsList = $('#aiSummaryPoints');
+    pointsList.innerHTML = `
+      <li>اضغط على زر <strong>"📂 اختيار ملف آخر..."</strong> في الأعلى لاختيار أي ملف من جهازك.</li>
+      <li>يدعم التحليل والتلخيص لملفات الترجمة (.srt / .vtt) والنصوص والمستندات (.txt / .md / .pdf).</li>
+      <li>بالنسبة للفيديوهات، يقوم المساعد بالبحث عن الترجمة المرفقة وتلخيص كامل الحوارات بدقة.</li>
+    `;
+    $('#aiSummaryStats').textContent = 'في انتظار اختيار ملف...';
+    return;
+  }
+
+  $('#aiSummaryLoading').hidden = false;
+  $('#aiSummaryContent').hidden = true;
+
   try {
-    const res = await window.pdm.invoke('ai:summarizeFile', { filePath: task.filePath, maxPoints: 5 });
+    const res = await window.pdm.invoke('ai:summarizeFile', { filePath: fp, maxPoints: 5 });
     $('#aiSummaryLoading').hidden = true;
     $('#aiSummaryContent').hidden = false;
 
@@ -60,12 +75,19 @@ export function wireAiSummaryModal() {
 
   const copyBtn = $('#btnCopyAiSummary');
   if (copyBtn) {
-    copyBtn.onclick = () => {
+    copyBtn.onclick = async () => {
       const overview = $('#aiSummaryOverview').textContent;
       const points = [...$('#aiSummaryPoints').querySelectorAll('li')].map(li => '• ' + li.textContent).join('\n');
-      const text = `ملخص الذكاء الاصطناعي:\n${overview}\n\nالنقاط الرئيسية:\n${points}`;
-      navigator.clipboard.writeText(text);
-      toast('✓ تم نسخ ملخص الذكاء الاصطناعي إلى الحافظة', 'ok');
+      const text = `ملخص المحتوى:\n${overview}\n\nالنقاط الرئيسية:\n${points}`;
+      try {
+        await window.pdm.invoke('clipboard:write', { text });
+      } catch (_e) {}
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text);
+        }
+      } catch (_e) {}
+      toast('✓ تم نسخ نص الملخص بنجاح إلى الحافظة', 'ok');
     };
   }
 }
