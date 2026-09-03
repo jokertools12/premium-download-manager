@@ -611,7 +611,7 @@ class VideoManager extends EventEmitter {
   }
 
   isStreamUrl(url) {
-    return /\.m3u8($|[?#])|\.mpd($|[?#])/i.test(String(url || ''));
+    return /\.m3u8($|[?#])|\.mpd($|[?#])|youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|facebook\.com|fb\.watch|instagram\.com|twitter\.com|x\.com|dailymotion\.com/i.test(String(url || ''));
   }
 
   /* ===== استخراج الصوت من فيديو مكتمل إلى MP3 (4.3) =====

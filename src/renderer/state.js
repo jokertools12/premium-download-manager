@@ -22,8 +22,8 @@ export const CATEGORIES = [
 export const statusLabel = s => window.t('status.' + s);
 export const CAT_ICON = Object.fromEntries(CATEGORIES.map(c => [c.id, c.icon]));
 
-/* روابط البث المباشر (M3U8/MPD) توجّه لنافذة الفيديو */
-export const STREAM_RE = /\.m3u8($|[?#])|\.mpd($|[?#])/i;
+/* روابط البث والفيديوهات (M3U8/MPD/YouTube/TikTok/FB) توجّه لنافذة الفيديو */
+export const STREAM_RE = /\.m3u8($|[?#])|\.mpd($|[?#])|youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|facebook\.com|fb\.watch|instagram\.com\/(?:p|reel|tv)\/|twitter\.com\/.*\/status|x\.com\/.*\/status|dailymotion\.com/i;
 
 export const state = {
   tasks: new Map(),

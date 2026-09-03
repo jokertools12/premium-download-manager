@@ -46,6 +46,18 @@ export function wireAiSummaryModal() {
   const closeBtn = $('#btnAiSummaryClose');
   if (closeBtn) closeBtn.onclick = () => closeModal('#aiSummaryModal');
 
+  const browseBtn = $('#btnBrowseAi');
+  if (browseBtn) {
+    browseBtn.onclick = async () => {
+      const picked = await window.pdm.invoke('chooseFile', {
+        filters: [{ name: 'Text & Media', extensions: ['srt', 'vtt', 'txt', 'md', 'pdf', 'mp4', 'mkv', 'webm', 'mp3'] }]
+      });
+      if (picked) {
+        openAiSummaryModal({ filePath: picked, filename: picked.split(/[\\/]/).pop() });
+      }
+    };
+  }
+
   const copyBtn = $('#btnCopyAiSummary');
   if (copyBtn) {
     copyBtn.onclick = () => {

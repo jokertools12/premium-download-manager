@@ -471,6 +471,13 @@ function setupIpc({
         const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
         return r.canceled ? null : r.filePaths[0];
       }
+      case 'chooseFile': {
+        const r = await dialog.showOpenDialog(win, {
+          properties: ['openFile'],
+          filters: (payload && payload.filters) || undefined
+        });
+        return r.canceled ? null : r.filePaths[0];
+      }
       case 'showInFolder': {
         const id1 = (payload || {}).id;
         const t1 = engine.get(id1) || (video && video.get(id1)) || (torrent && torrent.get(id1));

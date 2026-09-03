@@ -54,11 +54,11 @@ function buildYtDlpArgs(task) {
   } else if (task.isPlaylist) {
     fmt = rawFmt || 'bestvideo+bestaudio/best';
   } else {
-    fmt = rawFmt || 'best';
+    fmt = rawFmt || 'bestvideo+bestaudio/best';
   }
 
   // إذا كانت جودة محددة (مثل 1080p أو رقم مسار) بدون صوت، نضيف +bestaudio/best لضمان دمج الصوت دائماً
-  if (!audio && rawFmt && (rawFmt.includes('[height') || /^\d+$/.test(rawFmt)) && !rawFmt.includes('+') && !rawFmt.includes('bestaudio')) {
+  if (!audio && rawFmt && (rawFmt.includes('[height') || /^\d+$/.test(rawFmt) || rawFmt.includes('bestvideo')) && !rawFmt.includes('+') && !rawFmt.includes('bestaudio')) {
     fmt = `${rawFmt}+bestaudio/best`;
   }
 

@@ -20,6 +20,20 @@ export function wireTranscodeModal() {
 
   $('#btnTranscodeClose').onclick = () => closeModal('#transcodeModal');
 
+  const browseBtn = $('#btnBrowseTranscode');
+  if (browseBtn) {
+    browseBtn.onclick = async () => {
+      const picked = await window.pdm.invoke('chooseFile', {
+        filters: [{ name: 'Media Files', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'mp3', 'wav', 'flac', 'aac', 'm4a'] }]
+      });
+      if (picked) {
+        currentTask = { filePath: picked, filename: picked.split(/[\\/]/).pop() };
+        $('#transcodeSource').value = picked;
+        $('#transcodeSourceDisplay').textContent = currentTask.filename;
+      }
+    };
+  }
+
   $('#transcodeType').onchange = e => {
     const val = e.target.value;
     $('#transcodeFormatGroup').hidden = val !== 'audio';

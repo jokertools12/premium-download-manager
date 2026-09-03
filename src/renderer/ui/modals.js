@@ -123,6 +123,31 @@ export async function openSettings() {
   window.pdm.invoke('update:state').then(st => {
     $('#updVersion').textContent = window.t('update.current', { v: (st && st.currentVersion) || '?' });
   }).catch(() => {});
+
+  // v6.0 Ultra: إعدادات التليجرام والشبكات
+  const tg = s.telegram || {};
+  const tgOn = $('#stTelegramOn');
+  if (tgOn) tgOn.checked = !!tg.enabled;
+  const tgToken = $('#stTelegramToken');
+  if (tgToken) tgToken.value = tg.botToken || '';
+  const tgChat = $('#stTelegramChatId');
+  if (tgChat) tgChat.value = tg.chatId || '';
+  const tgNotify = $('#stTelegramNotify');
+  if (tgNotify) tgNotify.checked = tg.notifyOnComplete !== false;
+
+  try {
+    const netStatus = await window.pdm.invoke('network:getStatus');
+    const netBond = $('#stNetworkBonding');
+    if (netBond) netBond.checked = !!(netStatus && netStatus.enabled);
+    const count = (netStatus && netStatus.adapterCount) || 0;
+    const adList = (netStatus && netStatus.adapters || []).map(a => `${a.name} (${a.address})`).join(', ');
+    const statText = $('#bondingStatusText');
+    if (statText) {
+      statText.textContent = count >= 2
+        ? `✓ تم اكتشاف ${count} كروت شبكة نشطة متاحة للدمج: ${adList}`
+        : `ℹ️ الكروت النشطة: ${adList || 'كرت افتراضي واحد'}. يمكنك تشغيل واي فاي وكابل معاً للمضاعفة.`;
+    }
+  } catch (_e) {}
 }
 
 export async function saveSettings() {
@@ -148,6 +173,22 @@ export async function saveSettings() {
       stopAt: $('#stStopAt').value
     }
   };
+
+  const tgOn = $('#stTelegramOn');
+  if (tgOn) {
+    const tgPatch = {
+      enabled: $('#stTelegramOn').checked,
+      botToken: $('#stTelegramToken').value.trim(),
+      chatId: $('#stTelegramChatId').value.trim(),
+      notifyOnComplete: $('#stTelegramNotify').checked
+    };
+    await window.pdm.invoke('telegram:save', tgPatch).catch(() => {});
+  }
+  const netBond = $('#stNetworkBonding');
+  if (netBond) {
+    await window.pdm.invoke('network:setBonding', { enabled: netBond.checked }).catch(() => {});
+  }
+
   state.settings = await window.pdm.invoke('setSettings', patch);
   applyTheme(state.settings.theme, state.settings.accentColor, state.settings.density);
   const langChanged = state.settings.language !== window.getLang();
@@ -284,6 +325,23 @@ export function wirePluginsUI() {
 
 /* ===== ربط أزرار النوافذ ===== */
 export function wireModals() {
+  const btnTestTg = $('#btnTestTelegram');
+  if (btnTestTg) {
+    btnTestTg.onclick = async () => {
+      const token = $('#stTelegramToken').value.trim();
+      if (!token) return toast('يرجى كتابة Bot Token أولاً', 'err');
+      $('#tgTestResult').textContent = 'جاري الاختبار... ⏳';
+      try {
+        const res = await window.pdm.invoke('telegram:test', { token });
+        $('#tgTestResult').textContent = `✓ متصل بنجاح: @${res.username}`;
+        toast(`✓ نجح الاتصال ببوت التليجرام: @${res.username}`, 'ok');
+      } catch (err) {
+        $('#tgTestResult').textContent = 'فشل: ' + (err.message || err);
+        toast('فشل الاتصال بالبوت: ' + (err.message || err), 'err');
+      }
+    };
+  }
+
   // إضافة رابط
   $('#btnBrowse').onclick = async () => {
     const d = await window.pdm.invoke('chooseDir');

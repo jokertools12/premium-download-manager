@@ -144,6 +144,19 @@ export function wireMainUI() {
   wireTranscodeModal();
   wireAiSummaryModal();
 
+  const openTranscodeHandler = () => openTranscodeModal({ filePath: '', filename: '' });
+  const openAiHandler = () => openAiSummaryModal({ filePath: '', filename: '' });
+
+  const btnOpenTranscodeSide = $('#btnOpenTranscodeSide');
+  if (btnOpenTranscodeSide) btnOpenTranscodeSide.onclick = openTranscodeHandler;
+  const btnTbTranscode = $('#btnTbTranscode');
+  if (btnTbTranscode) btnTbTranscode.onclick = openTranscodeHandler;
+
+  const btnOpenAiSummarySide = $('#btnOpenAiSummarySide');
+  if (btnOpenAiSummarySide) btnOpenAiSummarySide.onclick = openAiHandler;
+  const btnTbAi = $('#btnTbAi');
+  if (btnTbAi) btnTbAi.onclick = openAiHandler;
+
   // القائمة الجانبية
   $('#sidebar').addEventListener('click', e => {
     const b = e.target.closest('[data-filter]');

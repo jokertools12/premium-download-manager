@@ -1,6 +1,6 @@
 'use strict';
 
-/* Premium DM Extension v6.0.0 — Professional Download Interception:
+/* Premium DM Extension v7.0.0 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.

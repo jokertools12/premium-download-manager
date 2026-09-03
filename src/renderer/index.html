@@ -40,13 +40,15 @@
         <button id="btnRules" class="side-item"><span>📐</span><span data-i18n="side.rules">القواعد التلقائية</span></button>
         <button id="btnRssFeeds" class="side-item"><span>📡</span><span>خلاصات RSS</span></button>
         <button id="btnOpenCleanup" class="side-item"><span>🧹</span><span>التنظيف الذكي</span></button>
+        <button id="btnOpenTranscodeSide" class="side-item"><span>🔄</span><span>استوديو تحويل الوسائط</span></button>
+        <button id="btnOpenAiSummarySide" class="side-item"><span>💡</span><span>مساعد الذكاء الاصطناعي</span></button>
         <div class="side-sep"></div>
         <div class="side-title" data-i18n="side.cats">التصنيفات</div>
         <nav id="sideCats"></nav>
       </div>
       <div class="sidebar-footer">
         <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
-        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v6.0.0</span></div>
+        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v7.0.0</span></div>
       </div>
     </aside>
 
@@ -57,6 +59,8 @@
         <button id="btnVideo" class="btn ghost" data-i18n="toolbar.video" data-i18n-title="toolbar.videoTitle" title="تحميل فيديو"><span class="btn-icon">🎬</span> <span class="btn-lbl">فيديو</span></button>
         <button id="btnTorrent" class="btn ghost" data-i18n="toolbar.torrent" data-i18n-title="toolbar.torrentTitle" title="تحميل تورنت"><span class="btn-icon">🧲</span> <span class="btn-lbl">تورنت</span></button>
         <button id="btnGrab" class="btn ghost" data-i18n="toolbar.grab" data-i18n-title="toolbar.grabTitle" title="فحص صفحة"><span class="btn-icon">🌐</span> <span class="btn-lbl">فحص صفحة</span></button>
+        <button id="btnTbTranscode" class="btn ghost" title="استوديو تحويل وضغط الوسائط 6.0"><span class="btn-icon">🔄</span> <span class="btn-lbl">تحويل الوسائط</span></button>
+        <button id="btnTbAi" class="btn ghost" title="مساعد الذكاء الاصطناعي لتلخيص المحتوى 6.0"><span class="btn-icon">💡</span> <span class="btn-lbl">الذكاء الاصطناعي</span></button>
         <button id="btnMobilePair" class="btn ghost" title="إقران الموبايل" aria-label="Mobile Companion">📱</button>
         <input id="search" type="text" data-i18n-ph="toolbar.searchPh" placeholder="🔍 ابحث في التحميلات..." aria-label="Search downloads">
         <!-- القائمة المنسدلة المخصصة للترتيب والفلترة -->
@@ -569,6 +573,26 @@
           <button id="btnCheckUpdate" class="btn ghost" data-i18n="update.check">🔄 التحقق من التحديثات</button>
           <span id="updVersion" class="hint"></span>
         </div>
+        <div class="side-title">⚡ التسريع التوربيني المزدوج (Multi-WAN Bonding 6.0)</div>
+        <label class="chk"><input id="stNetworkBonding" type="checkbox"> <span>دمج كروت الشبكة المتعددة (Wi-Fi + Ethernet) بالتوازي لمضاعفة السرعة حتى 200%</span></label>
+        <div id="bondingStatusText" class="hint" style="margin-bottom:8px;"></div>
+
+        <div class="side-title">🤖 بوت التليجرام والمزامنة السحابية (Telegram Companion 6.0)</div>
+        <label class="chk"><input id="stTelegramOn" type="checkbox"> <span>تفعيل بوت التليجرام الخاص للتحميل عن بعد والإشعارات</span></label>
+        <div class="row">
+          <label class="fld"><span style="font-size:12px;">مفتاح البوت (Bot Token)</span>
+            <input id="stTelegramToken" type="text" placeholder="123456789:ABCdefGhIJKlmNoPQR">
+          </label>
+          <label class="fld"><span style="font-size:12px;">معرف المحادثة (Chat ID)</span>
+            <input id="stTelegramChatId" type="text" placeholder="987654321">
+          </label>
+        </div>
+        <label class="chk"><input id="stTelegramNotify" type="checkbox" checked> <span>إرسال إشعار فوري إلى التليجرام عند اكتمال التحميل</span></label>
+        <div class="row" style="margin-top:4px;align-items:center;">
+          <button id="btnTestTelegram" class="btn ghost" type="button">🔍 اختبار الاتصال بالبوت</button>
+          <span id="tgTestResult" class="hint" style="margin-inline-start:8px;"></span>
+        </div>
+
         <div class="side-title" data-i18n="plug.title">🧩 المكوّنات الإضافية (6.5)</div>
         <div id="pluginsList"></div>
         <div class="hint" data-i18n="plug.hint">ضع ملفات .js في مجلد plugins داخل مجلد بيانات البرنامج — راجع docs/PLUGINS.md</div>
@@ -627,7 +651,8 @@
         <input id="transcodeSource" type="hidden">
         <div class="row" style="margin-bottom:10px;">
           <label>الملف المصدر:</label>
-          <div id="transcodeSourceDisplay" class="hint" style="font-weight:700;word-break:break-all;"></div>
+          <div id="transcodeSourceDisplay" class="hint" style="font-weight:700;word-break:break-all;">(لم يتم اختيار ملف)</div>
+          <button id="btnBrowseTranscode" class="btn ghost mini" type="button" style="margin-inline-start:8px;">📂 استعراض...</button>
         </div>
         <div class="row" style="margin-bottom:10px;">
           <label>نوع العملية:</label>
@@ -688,7 +713,10 @@
         <button id="btnAiSummaryClose" class="modal-x">✕</button>
       </div>
       <div class="modal-body">
-        <h4 id="aiSummaryTitle" style="color:var(--accent);margin-bottom:12px;"></h4>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h4 id="aiSummaryTitle" style="color:var(--accent);margin:0;"></h4>
+          <button id="btnBrowseAi" class="btn ghost mini" type="button">📂 اختيار ملف آخر...</button>
+        </div>
         <div id="aiSummaryLoading" class="hint" style="font-size:14px;color:var(--accent);">
           ⚡ جاري قراءة وتحليل المحتوى وتوليد الأفكار الرئيسية بالذكاء الاصطناعي...
         </div>

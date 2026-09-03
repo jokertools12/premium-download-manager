@@ -248,7 +248,7 @@ class LocalServer {
         // مسار ping & status & summary للتكامل التام مع إضافة المتصفح
         if (pathname === '/ping') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '6.0.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '7.0.0' }));
           return;
         }
 
@@ -264,7 +264,7 @@ class LocalServer {
             running: true,
             connected: true,
             app: 'PremiumDM',
-            version: this.version || '6.0.0',
+            version: this.version || '7.0.0',
             speed: totalSpeed,
             totalSpeed,
             active: activeCount,
