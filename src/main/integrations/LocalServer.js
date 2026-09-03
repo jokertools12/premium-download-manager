@@ -78,7 +78,11 @@ class LocalServer {
                 if (msg.userAgent) headers['user-agent'] = msg.userAgent;
                 if (msg.headers && typeof msg.headers === 'object') Object.assign(headers, msg.headers);
                 if (this.video && (msg.video || this.video.isStreamUrl(url))) {
-                  this.video.autoDownload(url, this.videoDir());
+                  this.video.autoDownload(url, this.videoDir(), {
+                    formatId: msg.formatId || undefined,
+                    audioOnly: !!msg.audioOnly,
+                    mergeOutput: msg.mergeOutput || 'mp4'
+                  });
                 } else {
                   this.engine.addTask({ url, filename: msg.filename || undefined, headers });
                 }
@@ -137,20 +141,32 @@ class LocalServer {
           }
         }
 
-        // مسار ping & status
+        // مسار ping & status & summary للتكامل التام مع إضافة المتصفح
         if (pathname === '/ping') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '2.1.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '4.2.0' }));
           return;
         }
 
-        if (pathname === '/status') {
+        if (pathname === '/summary' || pathname === '/status') {
           let summary = { speed: 0, downloading: 0, queued: 0, paused: 0, completed: 0, failed: 0, total: 0 };
           try { summary = { ...summary, ...this.engine.summary() }; } catch (_e) {}
+          let totalSpeed = summary.speed || 0;
+          if (this.video) totalSpeed += this.video.totalSpeed() || 0;
+          const activeCount = summary.downloading + (this.video ? this.video.activeCount() : 0);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
-            ok: true, running: true, app: 'PremiumDM',
-            version: this.version || '2.1.0',
+            ok: true,
+            running: true,
+            connected: true,
+            app: 'PremiumDM',
+            version: this.version || '4.2.0',
+            speed: totalSpeed,
+            totalSpeed,
+            active: activeCount,
+            activeCount,
+            downloading: summary.downloading,
+            totalTasks: summary.total,
             summary
           }));
           return;

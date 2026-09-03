@@ -394,9 +394,14 @@ class VideoManager extends EventEmitter {
       const built = buildYtDlpArgs(task);
       await fsp.mkdir(task.dir, { recursive: true });
       const args = built.args;
-
       await new Promise((resolve, reject) => {
-        const proc = spawn(this.ytDlpPath, args, { windowsHide: true });
+        const env = {
+          ...process.env,
+          PYTHONIOENCODING: 'utf-8',
+          PYTHONUTF8: '1',
+          LANG: 'en_US.UTF-8'
+        };
+        const proc = spawn(this.ytDlpPath, args, { env, windowsHide: true });
         task._proc = proc;
         let stdoutBuf = '';
         const handleLine = line => {
@@ -618,11 +623,18 @@ class VideoManager extends EventEmitter {
     return { ...task };
   }
 
-  /* تحميل تلقائي بأفضل جودة (للروابط القادمة من المتصفح/الحافظة) */
-  async autoDownload(url, defaultDir) {
+  /* تحميل تلقائي بجودة محددة أو الأفضل (للروابط القادمة من المتصفح/الحافظة) */
+  async autoDownload(url, defaultDir, opts = {}) {
     try {
       const info = await this.probe(url);
-      return await this.start({ url, formatId: 'bestvideo+bestaudio/best', dir: defaultDir, title: info.title });
+      return await this.start({
+        url,
+        formatId: opts.formatId || 'bestvideo+bestaudio/best',
+        audioOnly: !!opts.audioOnly,
+        mergeOutput: opts.mergeOutput || 'mp4',
+        dir: defaultDir,
+        title: info.title
+      });
     } catch (err) {
       const id = 'vid-' + crypto.randomUUID();
       const task = {
@@ -630,7 +642,7 @@ class VideoManager extends EventEmitter {
         status: 'failed', received: 0, size: null, speed: 0, percent: null,
         error: String((err && err.message) || err).slice(0, 300),
         createdAt: Date.now(), completedAt: null, filename: '', filePath: null,
-        formatId: 'best', phase: ''
+        formatId: opts.formatId || 'best', phase: ''
       };
       this.tasks.set(id, task);
       this._emit(task);

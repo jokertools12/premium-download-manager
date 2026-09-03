@@ -51,7 +51,7 @@ export function taskCard(t) {
   <div class="task${selected}" data-id="${t.id}" data-status="${t.status}">
     <div class="t-icon">${icon}</div>
     <div class="t-main">
-      <div class="t-name" title="${escapeAttr(t.filename || t.title || t.url || '')}">${escapeHtml(t.filename || t.title || t.url || '...')}</div>
+      <div class="t-name" dir="auto" title="${escapeAttr(t.filename || t.title || t.url || '')}">${escapeHtml(t.filename || t.title || t.url || '...')}</div>
       <div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div>
       ${segs}
       <div class="t-meta">${cardMetaInner(t, pct, isVideo, isTorrent)}</div>

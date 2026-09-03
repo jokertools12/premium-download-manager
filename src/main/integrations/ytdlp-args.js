@@ -35,7 +35,7 @@ function parseTimecode(str) {
            subsLangs, clipStart, clipEnd, mergeOutput }
    يعيد { args, needsMerge } */
 function buildYtDlpArgs(task) {
-  const args = ['--newline', '--no-warnings'];
+  const args = ['--newline', '--no-warnings', '--windows-filenames', '--no-mtime'];
   const audio = !!task.audioOnly;
   const t0 = parseTimecode(task.clipStart);
   const t1 = parseTimecode(task.clipEnd);
@@ -44,12 +44,12 @@ function buildYtDlpArgs(task) {
   if (task.isPlaylist) {
     args.push('--yes-playlist');
     if (audio) args.push('-f', 'bestaudio/best');
-    args.push('-o', path.join(task.dir, '%(playlist_title|Playlist).60s/%(title).80s.%(ext)s'));
+    args.push('-o', path.join(task.dir, '%(playlist_title|Playlist)s/%(title)s.%(ext)s'));
     if (task.items) args.push('--playlist-items', String(task.items));
   } else {
     const fmt = audio ? 'bestaudio/best' : (task.formatId || 'best');
     args.push('-f', fmt, '--no-playlist');
-    args.push('-o', path.join(task.dir, '%(title).80s.%(ext)s'));
+    args.push('-o', path.join(task.dir, '%(title)s.%(ext)s'));
   }
 
   /* استخراج صوت MP3 (4.1/4.3) — يتطلب ffmpeg */

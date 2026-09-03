@@ -1,6 +1,6 @@
 'use strict';
 
-/* Premium DM Extension v4.1.0 — Professional Download Interception:
+/* Premium DM Extension v4.2.0 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
@@ -272,17 +272,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // استعلام حالة البرنامج المكتبي (السرعة والمهام النشطة)
   if (msg.type === 'getAppStatus') {
     httpSend('/summary', null, 'GET').then(summary => {
-      if (summary) {
+      if (summary && (summary.ok || summary.running || summary.connected)) {
         sendResponse({
           connected: true,
           speed: summary.totalSpeed || summary.speed || 0,
-          active: summary.activeCount || summary.downloading || 0,
+          active: summary.activeCount || summary.active || summary.downloading || 0,
           total: summary.totalTasks || 0
         });
       } else {
-        sendResponse({ connected: false });
+        // فحص المسار الاحتياطي /ping
+        httpSend('/ping', null, 'GET').then(p => {
+          if (p && p.ok) {
+            sendResponse({ connected: true, speed: 0, active: 0, total: 0 });
+          } else {
+            sendResponse({ connected: false });
+          }
+        }).catch(() => sendResponse({ connected: false }));
       }
-    }).catch(() => sendResponse({ connected: false }));
+    }).catch(() => {
+      httpSend('/ping', null, 'GET').then(p => {
+        if (p && p.ok) sendResponse({ connected: true, speed: 0, active: 0, total: 0 });
+        else sendResponse({ connected: false });
+      }).catch(() => sendResponse({ connected: false }));
+    });
     return true; // استجابة غير متزامنة
   }
 
