@@ -60,6 +60,19 @@ const MODULAR_CHANNELS = {
     'telemetry:status': { desc: 'حالة التيليمتري وخيار الموافقة الصريحة للمستخدم', reply: '{ optedIn, needsPrompt }' },
     'telemetry:setOptIn': { desc: 'تعديل خيار الموافقة على التيليمتري', args: ['enabled'] },
     'telemetry:logs': { desc: 'عرض سجلات الأخطاء والانهيارات المحلية المعقمة', reply: 'CrashLog[]' }
+  },
+  v6Ultra: {
+    'network:getStatus': { desc: 'حالة محولات الشبكة والتسريع المزدوج Multi-WAN', reply: 'BondingStatus' },
+    'network:setBonding': { desc: 'تفعيل أو تعطيل دمج كروت الشبكة', args: ['enabled'] },
+    'security:scan': { desc: 'فحص أمني للبصمة الرقمية والملفات التنفيذية', args: ['filePath'], reply: 'ScanResult' },
+    'security:quarantine': { desc: 'عزل ملف مشبوه في الحجر الصحي', args: ['filePath'], reply: 'QuarantineResult' },
+    'security:restore': { desc: 'استعادة ملف من الحجر الصحي', args: ['quarantinePath', 'destPath?'], reply: 'RestoreResult' },
+    'transcode:convert': { desc: 'تحويل صيغة ملف وسائط عبر محرك ffmpeg المدمج', args: ['source', 'target', 'opts?'] },
+    'transcode:compress': { desc: 'ضغط فيديو لتقليص الحجم', args: ['source', 'target', 'opts?'] },
+    'transcode:makeGif': { desc: 'توليد صورة متحركة GIF عالية الدقة من فيديو', args: ['source', 'target', 'opts?'] },
+    'telegram:test': { desc: 'اختبار الاتصال ببوت التليجرام', args: ['token'] },
+    'telegram:save': { desc: 'حفظ إعدادات بوت التليجرام', args: ['settings'] },
+    'ai:summarizeFile': { desc: 'تلخيص محتوى ملف فيديو أو نص بالذكاء الاصطناعي', args: ['filePath', 'maxPoints?'], reply: 'SummaryResult' }
   }
 };
 

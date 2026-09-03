@@ -27,9 +27,9 @@ export function cardMetaInner(t, pct, isVideo, isTorrent) {
     : `${fmtBytes(t.received)}${t.size ? ' / ' + fmtBytes(t.size) : ''}`;
   return `
         <span class="badge ${t.status}">${statusLabel(t.status)}</span>
-        <span>${displayBytes} (${pct.toFixed(0)}%)</span>
-        ${t.status === 'downloading' ? `<span class="speed">▲ ${fmtSpeed(t.speed)}</span>` : ''}
-        ${t.status === 'downloading' && !isVideo && !isTorrent ? `<span>${fmtEta(t)}</span>` : ''}
+        <span class="meta-size" dir="ltr">${displayBytes} (${pct.toFixed(0)}%)</span>
+        ${t.status === 'downloading' ? `<span class="speed" dir="ltr">▲ ${fmtSpeed(t.speed)}</span>` : ''}
+        ${t.status === 'downloading' && !isTorrent ? (t.size && t.speed ? `<span dir="ltr">${fmtEta(t)}</span>` : '') : ''}
         ${isVideo && t.status === 'downloading' && t.phase ? `<span>${escapeHtml(t.phase)}</span>` : ''}
         ${isVideo && t.isPlaylist && t.itemsTotal ? `<span>${t.itemsDone || 0} / ${t.itemsTotal}</span>` : ''}
         ${isTorrent && t.status === 'downloading' && t.peers != null ? `<span>${window.t('torrent.peers', { n: t.peers })}</span>` : ''}
@@ -109,10 +109,13 @@ export function cardActions(t, isVideo, isTorrent) {
     }
     if (t.status === 'completed') {
       actions.push(`<button class="btn mini" data-act="open" data-id="${t.id}" title="${window.t('act.open')}">📂</button>`);
+      actions.push(`<button class="btn mini" data-act="shield-scan" data-id="${t.id}" title="درع الأمان: فحص البصمة والتهديدات">🛡️</button>`);
     }
     /* زر معاينة الوسائط (3.3): صور أو فيديو/صوت قابل للتشغيل داخلياً */
     if (t.status === 'completed' && t.filePath && (isImage(t.filePath) || isPlayable(t.filePath))) {
       actions.push(`<button class="btn mini" data-act="preview" data-id="${t.id}" title="${window.t('act.preview')}">👁</button>`);
+      actions.push(`<button class="btn mini" data-act="transcode" data-id="${t.id}" title="استوديو الوسائط: تحويل / ضغط">🔄</button>`);
+      actions.push(`<button class="btn mini" data-act="ai-summary" data-id="${t.id}" title="الذكاء الاصطناعي: تلخيص المحتوى">💡</button>`);
     }
     if (t.filePath) {
       actions.push(`<button class="btn mini" data-act="folder" data-id="${t.id}" title="${window.t('act.folder')}">🗂️</button>`);

@@ -9,7 +9,10 @@
 <body>
   <!-- شريط العنوان المخصص -->
   <header id="titlebar" role="banner">
-    <div class="tb-brand"><span class="logo">⚡</span> Premium DM</div>
+    <div class="tb-brand">
+      <button id="btnToggleSidebar" class="tb-sidebar-toggle" title="إظهار / إخفاء القائمة الجانبية" aria-label="Toggle sidebar">☰</button>
+      <span class="logo">⚡</span> Premium DM
+    </div>
     <div id="totalSpeed" class="tb-speed" title="Total speed" aria-live="polite"><span>▲</span> 0 B/s</div>
     <div class="tb-controls" role="toolbar" aria-label="Window controls">
       <button id="btnMin" title="Minimize" aria-label="Minimize">&#x2500;</button>
@@ -43,17 +46,17 @@
       </div>
       <div class="sidebar-footer">
         <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
-        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v5.0.0</span></div>
+        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v6.0.0</span></div>
       </div>
     </aside>
 
     <!-- المحتوى الرئيسي -->
     <main id="main" role="main">
       <div id="toolbar" role="toolbar" aria-label="Main Toolbar">
-        <button id="btnAdd" class="btn primary" data-i18n="toolbar.add">＋ رابط جديد</button>
-        <button id="btnVideo" class="btn ghost" data-i18n="toolbar.video" data-i18n-title="toolbar.videoTitle">🎬 فيديو</button>
-        <button id="btnTorrent" class="btn ghost" data-i18n="toolbar.torrent" data-i18n-title="toolbar.torrentTitle">🧲 تورنت</button>
-        <button id="btnGrab" class="btn ghost" data-i18n="toolbar.grab" data-i18n-title="toolbar.grabTitle">🌐 فحص صفحة</button>
+        <button id="btnAdd" class="btn primary" data-i18n="toolbar.add" title="إضافة رابط جديد"><span class="btn-icon">＋</span> <span class="btn-lbl">رابط جديد</span></button>
+        <button id="btnVideo" class="btn ghost" data-i18n="toolbar.video" data-i18n-title="toolbar.videoTitle" title="تحميل فيديو"><span class="btn-icon">🎬</span> <span class="btn-lbl">فيديو</span></button>
+        <button id="btnTorrent" class="btn ghost" data-i18n="toolbar.torrent" data-i18n-title="toolbar.torrentTitle" title="تحميل تورنت"><span class="btn-icon">🧲</span> <span class="btn-lbl">تورنت</span></button>
+        <button id="btnGrab" class="btn ghost" data-i18n="toolbar.grab" data-i18n-title="toolbar.grabTitle" title="فحص صفحة"><span class="btn-icon">🌐</span> <span class="btn-lbl">فحص صفحة</span></button>
         <button id="btnMobilePair" class="btn ghost" title="إقران الموبايل" aria-label="Mobile Companion">📱</button>
         <input id="search" type="text" data-i18n-ph="toolbar.searchPh" placeholder="🔍 ابحث في التحميلات..." aria-label="Search downloads">
         <!-- القائمة المنسدلة المخصصة للترتيب والفلترة -->
@@ -100,8 +103,8 @@
         </select>
         <button id="btnSortDir" class="btn ghost" data-i18n-title="sort.dirTitle" aria-label="Sort direction">↓</button>
         <div class="spacer"></div>
-        <button id="btnResumeAll" class="btn ghost" data-i18n="toolbar.resumeAll" data-i18n-title="toolbar.resumeAllTitle">▶ الكل</button>
-        <button id="btnPauseAll" class="btn ghost" data-i18n="toolbar.pauseAll" data-i18n-title="toolbar.pauseAllTitle">⏸ الكل</button>
+        <button id="btnResumeAll" class="btn ghost" data-i18n="toolbar.resumeAll" data-i18n-title="toolbar.resumeAllTitle" title="استئناف الكل"><span class="btn-icon">▶</span> <span class="btn-lbl">الكل</span></button>
+        <button id="btnPauseAll" class="btn ghost" data-i18n="toolbar.pauseAll" data-i18n-title="toolbar.pauseAllTitle" title="إيقاف الكل"><span class="btn-icon">⏸</span> <span class="btn-lbl">الكل</span></button>
         <button id="btnClear" class="btn ghost" data-i18n-title="toolbar.clearTitle" aria-label="Clear">🧹</button>
         <button id="btnImport" class="btn ghost" data-i18n-title="toolbar.importTitle" aria-label="Import">📄</button>
         <button id="btnFloat" class="btn ghost" data-i18n-title="toolbar.floatTitle" aria-label="Float window">📌</button>
@@ -609,6 +612,97 @@
       <div class="modal-foot">
         <button class="btn ghost" data-close="grabModal" data-i18n="grab.close">إغلاق</button>
         <button id="btnGrabDownload" class="btn primary" hidden data-i18n="grab.download">⬇ تحميل المحدد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة استوديو تحويل وضغط الوسائط (Media Transcoder Studio 6.0) -->
+  <div id="transcodeModal" class="modal" hidden role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>🔄 استوديو الوسائط والضغط المدمج</h3>
+        <button id="btnTranscodeClose" class="modal-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <input id="transcodeSource" type="hidden">
+        <div class="row" style="margin-bottom:10px;">
+          <label>الملف المصدر:</label>
+          <div id="transcodeSourceDisplay" class="hint" style="font-weight:700;word-break:break-all;"></div>
+        </div>
+        <div class="row" style="margin-bottom:10px;">
+          <label>نوع العملية:</label>
+          <select id="transcodeType">
+            <option value="audio">🎵 استخراج / تحويل الصوت</option>
+            <option value="compress">📉 ضغط الفيديو وتقليص الحجم (HEVC/H.265)</option>
+            <option value="gif">🎞️ صانع صور متحركة عالية الدقة (GIF)</option>
+          </select>
+        </div>
+        <div id="transcodeFormatGroup" class="row" style="margin-bottom:10px;">
+          <label>صيغة الصوت:</label>
+          <select id="transcodeAudioFmt">
+            <option value="mp3">MP3 (320 kbps Studio)</option>
+            <option value="flac">FLAC (Lossless بدون فقدان)</option>
+            <option value="aac">AAC (256 kbps)</option>
+            <option value="wav">WAV (CD Quality)</option>
+          </select>
+          <input id="transcodeBitrate" type="hidden" value="320k">
+        </div>
+        <div id="compressGroup" class="row" hidden style="margin-bottom:10px;">
+          <label>محرك الضغط:</label>
+          <select id="compressCodec">
+            <option value="hevc">H.265 / HEVC (أقصى توفير للمساحة)</option>
+            <option value="h264">H.264 (توافقية عالمية)</option>
+          </select>
+          <label style="margin-inline-start:8px;">الدقة:</label>
+          <select id="compressScale">
+            <option value="">نفس الدقة الأصلية</option>
+            <option value="1920:-2">1080p Full HD</option>
+            <option value="1280:-2">720p HD</option>
+            <option value="854:-2">480p SD</option>
+          </select>
+          <input id="compressCrf" type="hidden" value="28">
+        </div>
+        <div id="gifGroup" class="row" hidden style="margin-bottom:10px;">
+          <label>بداية المقطع:</label>
+          <input id="gifStart" type="text" value="00:00:00" style="width:90px;" placeholder="00:00:00">
+          <label style="margin-inline-start:8px;">المدة (ثوانٍ):</label>
+          <input id="gifDuration" type="number" value="5" min="1" max="60" style="width:65px;">
+          <input id="gifFps" type="hidden" value="15">
+        </div>
+        <div id="transcodeProgress" class="hint" hidden style="color:var(--accent);margin-top:8px;">
+          <span id="transcodeProgressText"></span>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ghost" data-close="transcodeModal">إلغاء</button>
+        <button id="btnStartTranscode" class="btn primary">🚀 بدء المعالجة الفورية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة ملخص الذكاء الاصطناعي (AI Content Insights & Summarizer 6.0) -->
+  <div id="aiSummaryModal" class="modal" hidden role="dialog" aria-modal="true">
+    <div class="modal-card wide">
+      <div class="modal-head">
+        <h3>💡 مساعد الذكاء الاصطناعي لتلخيص المحتوى</h3>
+        <button id="btnAiSummaryClose" class="modal-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4 id="aiSummaryTitle" style="color:var(--accent);margin-bottom:12px;"></h4>
+        <div id="aiSummaryLoading" class="hint" style="font-size:14px;color:var(--accent);">
+          ⚡ جاري قراءة وتحليل المحتوى وتوليد الأفكار الرئيسية بالذكاء الاصطناعي...
+        </div>
+        <div id="aiSummaryContent" hidden>
+          <div class="side-title">📌 نظرة عامة وموجز المحتوى:</div>
+          <p id="aiSummaryOverview" style="line-height:1.7;background:var(--card);padding:12px;border-radius:10px;border:1px solid var(--border);"></p>
+          <div class="side-title" style="margin-top:14px;">🎯 أهم النقاط الأساسية (Key Takeaways):</div>
+          <ul id="aiSummaryPoints" style="line-height:1.8;padding-inline-start:20px;"></ul>
+          <div id="aiSummaryStats" class="hint" style="margin-top:10px;"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="btnCopyAiSummary" class="btn ghost">📋 نسخ الملخص</button>
+        <button class="btn primary" data-close="aiSummaryModal">إغلاق</button>
       </div>
     </div>
   </div>

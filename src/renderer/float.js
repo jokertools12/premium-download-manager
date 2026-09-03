@@ -9,6 +9,7 @@ const FL = {
   tr: { active: 'aktif', none: 'Etkin indirme yok', drop: 'Bağlantıyı buraya bırakın' }
 };
 let L = FL.ar;
+let currentActiveCount = 0;
 
 function fmt(n) {
   if (!n) return '0 B';
@@ -46,11 +47,79 @@ $('#fCollapse').onclick = (e) => {
 // النقر المزدوج على الكبسولة لفتح البرنامج الرئيسي
 $('#fPill').ondblclick = () => window.pdm.invoke('float:openMain');
 
-$('#fPause').onclick = () => window.pdm.invoke('pauseAll');
+// زر الإيقاف / الاستئناف الذكي
+$('#fPause').onclick = () => {
+  if (currentActiveCount > 0) {
+    window.pdm.invoke('pauseAll');
+  } else {
+    window.pdm.invoke('resumeAll');
+  }
+};
+
 $('#fOpen').onclick = () => window.pdm.invoke('float:openMain');
 $('#fClose').onclick = () => window.pdm.invoke('float:close');
 
-// قراءة الإعدادات والنمط الأولي
+function updateUI(data) {
+  if (!data) return;
+  const s = data.summary || {};
+  const tasks = data.tasks || [];
+  const active = tasks.filter(t => t.status === 'downloading');
+  const activeCount = s.downloading != null ? s.downloading : active.length;
+  currentActiveCount = activeCount;
+  const speedStr = fmt(s.speed || 0) + '/s';
+
+  // تحديث النمط المصغر (Compact Pill)
+  $('#fPillBadge').textContent = String(activeCount);
+  $('#fPillSpeed').textContent = activeCount > 0 ? ('▲ ' + speedStr) : '0 B/s';
+
+  // تحديث النمط الموسع (Expanded Card)
+  $('#fCount').textContent = `${activeCount} ${L.active}`;
+  $('#fSpeed').textContent = '▲ ' + speedStr;
+
+  // تحديث زر الإيقاف/الاستئناف
+  const pauseBtn = $('#fPause');
+  if (pauseBtn) {
+    if (activeCount > 0) {
+      pauseBtn.textContent = '⏸';
+      pauseBtn.title = 'إيقاف كل التحميلات مؤقتاً';
+    } else {
+      pauseBtn.textContent = '▶';
+      pauseBtn.title = 'استئناف كل التحميلات';
+    }
+  }
+
+  if (!active.length) {
+    $('#fName').textContent = L.none;
+    $('#fBar').style.width = '0%';
+    $('#fPillBar').style.width = '0%';
+    $('#fPct').textContent = '0%';
+    return;
+  }
+
+  // فرز أسرع تنزيل نشط وعرض بياناته
+  const top = [...active].sort((a, b) => (b.speed || 0) - (a.speed || 0))[0];
+  const name = top.filename || top.title || top.url || '';
+  $('#fName').textContent = name;
+  $('#fName').title = name;
+
+  const pct = top.size ? Math.min(100, (top.received / top.size) * 100)
+    : (top.percent != null ? top.percent : 0);
+  const pctStr = pct.toFixed(0) + '%';
+
+  $('#fBar').style.width = pct.toFixed(1) + '%';
+  $('#fPillBar').style.width = pct.toFixed(1) + '%';
+  $('#fPct').textContent = pctStr;
+}
+
+async function refreshState() {
+  try {
+    const list = await window.pdm.invoke('list');
+    const sum = await window.pdm.invoke('summary');
+    updateUI({ summary: sum, tasks: list });
+  } catch (_e) {}
+}
+
+// قراءة الإعدادات والنمط الأولي فور التحميل
 window.pdm.invoke('getSettings').then(s => {
   L = FL[(s && s.language) || 'ar'] || FL.ar;
   $('.f-drop-text').textContent = L.drop;
@@ -59,6 +128,9 @@ window.pdm.invoke('getSettings').then(s => {
 window.pdm.invoke('float:getMode').then(mode => {
   if (mode) setWidgetMode(mode);
 }).catch(() => {});
+
+refreshState();
+setInterval(refreshState, 3000);
 
 // السحب والإفلات (Drag & Drop)
 let dragCounter = 0;
@@ -102,40 +174,7 @@ window.pdm.onEvent(data => {
     return;
   }
 
-  if (data.type !== 'tasks') return;
-
-  const s = data.summary || {};
-  const active = (data.tasks || []).filter(t => t.status === 'downloading');
-  const activeCount = s.downloading || active.length || 0;
-  const speedStr = fmt(s.speed || 0) + '/s';
-
-  // تحديث النمط المصغر (Compact Pill)
-  $('#fPillBadge').textContent = String(activeCount);
-  $('#fPillSpeed').textContent = activeCount > 0 ? ('▲ ' + speedStr) : '0 B/s';
-
-  // تحديث النمط الموسع (Expanded Card)
-  $('#fCount').textContent = `${activeCount} ${L.active}`;
-  $('#fSpeed').textContent = '▲ ' + speedStr;
-
-  if (!active.length) {
-    $('#fName').textContent = L.none;
-    $('#fBar').style.width = '0%';
-    $('#fPillBar').style.width = '0%';
-    $('#fPct').textContent = '0%';
-    return;
+  if (data.type === 'tasks') {
+    updateUI(data);
   }
-
-  // فرز أسرع تنزيل نشط وعرض بياناته
-  const top = [...active].sort((a, b) => (b.speed || 0) - (a.speed || 0))[0];
-  const name = top.filename || top.title || top.url || '';
-  $('#fName').textContent = name;
-  $('#fName').title = name;
-
-  const pct = top.size ? Math.min(100, (top.received / top.size) * 100)
-    : (top.percent != null ? top.percent : 0);
-  const pctStr = pct.toFixed(0) + '%';
-
-  $('#fBar').style.width = pct.toFixed(1) + '%';
-  $('#fPillBar').style.width = pct.toFixed(1) + '%';
-  $('#fPct').textContent = pctStr;
 });

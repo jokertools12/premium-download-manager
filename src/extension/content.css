@@ -17,30 +17,68 @@
   opacity: 1;
 }
 
-.pdm-widget-btn {
+.pdm-widget-bar {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 3px;
   background: linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(11, 15, 26, 0.98));
-  color: #f0f4fc;
   border: 1px solid rgba(79, 140, 255, 0.45);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  padding: 7px 13px;
+  padding: 3px 5px;
   border-radius: 9px;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(79, 140, 255, 0.25);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.pdm-widget-btn:hover {
-  background: linear-gradient(135deg, #1e293b, #151d30);
+.pdm-widget-bar:hover {
   border-color: #4f8cff;
   box-shadow: 0 8px 24px rgba(79, 140, 255, 0.4);
+}
+
+.pdm-widget-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: #f0f4fc;
+  border: none;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pdm-widget-btn:hover {
+  background: rgba(79, 140, 255, 0.15);
   color: #ffffff;
-  transform: translateY(-1px);
+}
+
+.pdm-widget-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.pdm-widget-close:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+  transform: scale(1.08);
 }
 
 .pdm-widget-btn .pdm-icon {
@@ -108,6 +146,22 @@
   margin-bottom: 6px;
 }
 
+.pdm-menu-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.pdm-menu-close:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.18);
+}
+
 .pdm-header-title {
   font-size: 11.5px;
   font-weight: 700;
@@ -129,6 +183,17 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  max-height: 330px;
+  overflow-y: auto;
+  padding-inline-end: 2px;
+}
+
+.pdm-menu-items::-webkit-scrollbar {
+  width: 4px;
+}
+.pdm-menu-items::-webkit-scrollbar-thumb {
+  background: rgba(79, 140, 255, 0.4);
+  border-radius: 4px;
 }
 
 .pdm-q-item {

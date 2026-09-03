@@ -7,7 +7,7 @@ const fsp = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
 const { buildYtDlpArgs } = require('./ytdlp-args');
-const { binaries, needsChmod } = require('../platforms');
+const { binaries, needsChmod, dataDir } = require('../platforms');
 
 const once = (em, ev) => new Promise(r => em.once(ev, r));
 
@@ -34,13 +34,26 @@ class VideoManager extends EventEmitter {
   }
 
   hasYtDlp() {
-    if (fs.existsSync(this.ytDlpPath)) {
-      try {
-        const stat = fs.statSync(this.ytDlpPath);
-        if (stat.size > 1024 * 512) return true;
-        fs.unlinkSync(this.ytDlpPath);
-      } catch (_e) {}
+    const candidateDirs = [
+      this.binDir,
+      dataDir ? path.join(dataDir(), 'bin') : null,
+      path.join(process.env.APPDATA || '', 'PremiumDownloadManager', 'bin'),
+      path.join(process.env.APPDATA || '', 'premium-download-manager', 'bin')
+    ];
+
+    for (const dir of candidateDirs) {
+      if (!dir) continue;
+      const p = path.join(dir, this._bins.ytDlp.file);
+      if (fs.existsSync(p)) {
+        try {
+          if (fs.statSync(p).size > 1024 * 512) {
+            this.ytDlpPath = p;
+            return true;
+          }
+        } catch (_e) {}
+      }
     }
+
     try {
       const { execSync } = require('child_process');
       const cmd = process.platform === 'win32' ? 'where yt-dlp.exe' : 'which yt-dlp';
@@ -57,13 +70,23 @@ class VideoManager extends EventEmitter {
   }
 
   ffmpegDir() {
-    const localFfmpeg = path.join(this.binDir, this._bins.ffmpeg.file);
-    if (fs.existsSync(localFfmpeg)) {
-      try {
-        if (fs.statSync(localFfmpeg).size > 1024 * 512) return this.binDir;
-        fs.unlinkSync(localFfmpeg);
-      } catch (_e) {}
+    const candidateDirs = [
+      this.binDir,
+      dataDir ? path.join(dataDir(), 'bin') : null,
+      path.join(process.env.APPDATA || '', 'PremiumDownloadManager', 'bin'),
+      path.join(process.env.APPDATA || '', 'premium-download-manager', 'bin')
+    ];
+
+    for (const dir of candidateDirs) {
+      if (!dir) continue;
+      const localFfmpeg = path.join(dir, this._bins.ffmpeg.file);
+      if (fs.existsSync(localFfmpeg)) {
+        try {
+          if (fs.statSync(localFfmpeg).size > 1024 * 512) return dir;
+        } catch (_e) {}
+      }
     }
+
     try {
       const { execSync } = require('child_process');
       const cmd = process.platform === 'win32' ? 'where ffmpeg.exe' : 'which ffmpeg';
@@ -295,8 +318,8 @@ class VideoManager extends EventEmitter {
       if (seen.has(key)) continue;
       seen.add(key);
 
-      // دمج تلقائي دائماً: إذا كان المسار فيديو فقط (DASH في يوتيوب)، نضيف أفضل مسار صوت تلقائياً
-      const formatId = (f.acodec === 'none')
+      // ضمان دمج الصوت دائماً: في يوتيوب ومعظم المواقع الحديثة، الفيديوهات عالية الدقة تحتاج دمج أفضل صوت تلقائياً
+      const formatId = (f.acodec === 'none' || !f.acodec || f.vcodec !== 'none')
         ? `${f.format_id}+bestaudio/best`
         : f.format_id;
 
@@ -408,11 +431,13 @@ class VideoManager extends EventEmitter {
       await fsp.mkdir(task.dir, { recursive: true });
       const args = built.args;
       await new Promise((resolve, reject) => {
+        const ffDir = task.ffmpegDir || this.ffmpegDir();
         const env = {
           ...process.env,
           PYTHONIOENCODING: 'utf-8',
           PYTHONUTF8: '1',
-          LANG: 'en_US.UTF-8'
+          LANG: 'en_US.UTF-8',
+          PATH: (ffDir ? (ffDir + path.delimiter) : '') + (process.env.PATH || '')
         };
         const proc = spawn(this.ytDlpPath, args, { env, windowsHide: true });
         task._proc = proc;
@@ -448,14 +473,18 @@ class VideoManager extends EventEmitter {
               task.phase = `العنصر ${m[1]} / ${m[2]}`;
               this._emit(task);
             }
-          } else if (l.startsWith('[download] Destination:') || l.startsWith('[Merger]') || l.startsWith('[ExtractAudio]')) {
+          } else if (l.startsWith('[download] Destination:') || l.startsWith('[Merger]') || l.startsWith('[ExtractAudio]') || l.startsWith('[ffmpeg]')) {
             const m = /"(.+)"$/.exec(l) || /Destination:\s*(.+)$/.exec(l);
-            if (m) { task.filename = path.basename(m[1]); task.filePath = m[1]; }
+            if (m) {
+              const detected = m[1].trim();
+              task.filePath = detected;
+              task.filename = path.basename(detected);
+            }
             if (l.startsWith('[Merger]')) {
               task.phase = 'جاري دمج الفيديو والصوت عبر ffmpeg...';
               this._emit(task);
-            } else if (l.startsWith('[ExtractAudio]')) {
-              task.phase = 'جاري استخراج وتحويل الصوت...';
+            } else if (l.startsWith('[ExtractAudio]') || l.startsWith('[ffmpeg]')) {
+              task.phase = 'جاري استخراج وتحويل الصوت إلى MP3...';
               this._emit(task);
             }
           } else if (l.startsWith('DONE|')) {
@@ -464,8 +493,10 @@ class VideoManager extends EventEmitter {
             try {
               if (task.filePath && fs.existsSync(task.filePath)) {
                 const st = fs.statSync(task.filePath);
-                task.size = st.size;
-                task.received = st.size;
+                if (st.size > 0) {
+                  task.size = st.size;
+                  task.received = st.size;
+                }
               }
             } catch (_e) {}
             if (task.isPlaylist) {
@@ -492,7 +523,16 @@ class VideoManager extends EventEmitter {
           task._proc = null;
           if (task.status === 'canceled') return resolve();
           if (code === 0) {
-            // محاولة ذكية لالتقاط الملف من المجلد إن لم يُلتقط في مسار الطباعة
+            // التحقق من تحويل الصوت إلى MP3
+            if (task.audioOnly && task.filePath) {
+              const mp3Candidate = task.filePath.replace(/\.[^.]+$/, '.mp3');
+              if (fs.existsSync(mp3Candidate)) {
+                task.filePath = mp3Candidate;
+                task.filename = path.basename(mp3Candidate);
+              }
+            }
+
+            // محاولة ذكية لالتقاط الملف من المجلد إن لم يُلتقط في مسار الطباعة أو حُذف الملف المؤقت
             if ((!task.filePath || !fs.existsSync(task.filePath)) && task.dir && fs.existsSync(task.dir)) {
               try {
                 const files = fs.readdirSync(task.dir).map(f => ({
@@ -502,17 +542,22 @@ class VideoManager extends EventEmitter {
                 })).filter(f => !f.name.endsWith('.part') && !f.name.endsWith('.ytdl') && !f.name.endsWith('.vtt') && !f.name.endsWith('.srt'));
                 files.sort((a, b) => b.mtime - a.mtime);
                 if (files.length) {
-                  task.filePath = files[0].path;
-                  task.filename = files[0].name;
+                  const mp3Match = task.audioOnly ? files.find(f => f.name.endsWith('.mp3')) : null;
+                  const picked = mp3Match || files[0];
+                  task.filePath = picked.path;
+                  task.filename = picked.name;
                 }
               } catch (_e) {}
             }
+
             // قراءة الحجم الحقيقي من القرص لمنع ظهور 0 B للملفات المكتملة
             if (task.filePath && fs.existsSync(task.filePath)) {
               try {
                 const st = fs.statSync(task.filePath);
-                task.size = st.size;
-                task.received = st.size;
+                if (st.size > 0) {
+                  task.size = st.size;
+                  task.received = st.size;
+                }
                 if (!task.filename) task.filename = path.basename(task.filePath);
               } catch (_e) {}
             }

@@ -14,6 +14,8 @@ import { openTorrentModal } from './ui/torrent.js';
 import { openPreview, openStreamPreview } from './ui/preview.js';
 import { findHistory } from './ui/history.js';
 import { openGrabber, scanGrab, grabDownloadSelected } from './ui/grabber.js';
+import { openTranscodeModal, wireTranscodeModal } from './ui/transcode.js';
+import { openAiSummaryModal, wireAiSummaryModal } from './ui/ai-summary.js';
 
 /* ===== أحداث النواة ===== */
 export function wireIpc() {
@@ -115,6 +117,13 @@ export function wireMainUI() {
   $('#btnMin').onclick = () => window.pdm.invoke('win:minimize');
   $('#btnMax').onclick = () => window.pdm.invoke('win:maximize');
   $('#btnClose').onclick = () => window.pdm.invoke('win:close');
+  const btnToggleSidebar = $('#btnToggleSidebar');
+  if (btnToggleSidebar) {
+    btnToggleSidebar.onclick = () => {
+      const sb = $('#sidebar');
+      if (sb) sb.classList.toggle('sidebar-hidden');
+    };
+  }
 
   // شريط الأدوات
   $('#btnAdd').onclick = () => openAdd('');
@@ -131,6 +140,9 @@ export function wireMainUI() {
   $('#grabUrl').addEventListener('keydown', e => { if (e.key === 'Enter') scanGrab(); });
   $('#btnGrabDownload').onclick = grabDownloadSelected;
   $('#btnSettings').onclick = openSettings;
+
+  wireTranscodeModal();
+  wireAiSummaryModal();
 
   // القائمة الجانبية
   $('#sidebar').addEventListener('click', e => {
@@ -251,6 +263,33 @@ export function wireMainUI() {
     else if (act === 'open') window.pdm.invoke('openPath', { path: (state.tasks.get(id) || {}).filePath || '' });
     else if (act === 'preview') openPreview(state.tasks.get(id));
     else if (act === 'folder') window.pdm.invoke('revealPath', { path: (state.tasks.get(id) || {}).filePath || '' });
+    else if (act === 'shield-scan') {
+      const t = state.tasks.get(id);
+      if (!t || !t.filePath) return toast('مسار الملف غير متوفر', 'err');
+      try {
+        toast('🛡️ جاري الفحص الأمني للبصمة الرقمية...', 'ok');
+        const res = await window.pdm.invoke('security:scan', { filePath: t.filePath });
+        if (res.isSafe) {
+          toast(`🛡️ فحص الأمان: الملف آمن 100% (SHA-256: ${res.sha256.slice(0, 12)}...)`, 'ok');
+        } else if (res.riskLevel === 'danger') {
+          toast(`⚠️ خطر أمني: ${res.reasons.join(' | ')}`, 'err');
+        } else {
+          toast(`ℹ️ تنبيه أمني: ${res.reasons.join(' | ')}`, 'warn');
+        }
+      } catch (err) {
+        toast('فشل الفحص الأمني: ' + (err.message || err), 'err');
+      }
+    }
+    else if (act === 'transcode') {
+      const t = state.tasks.get(id);
+      if (!t || !t.filePath) return toast('مسار الملف غير متوفر', 'err');
+      openTranscodeModal(t);
+    }
+    else if (act === 'ai-summary') {
+      const t = state.tasks.get(id);
+      if (!t || !t.filePath) return toast('مسار الملف غير متوفر', 'err');
+      openAiSummaryModal(t);
+    }
     else if (act === 'remove') {
       // حذف فوري من الواجهة (تفاؤلي) ثم تأكيد من النواة
       state.tasks.delete(id);

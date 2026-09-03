@@ -1,6 +1,6 @@
 'use strict';
 
-/* Premium DM Extension v5.0.0 — Professional Download Interception:
+/* Premium DM Extension v6.0.0 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
@@ -269,6 +269,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  // استعلام الجودات الحقيقية المتاحة للفيديو ديناميكياً
+  if (msg.type === 'getVideoFormats') {
+    const targetUrl = msg.url || (sender.tab && sender.tab.url);
+    if (!targetUrl) {
+      sendResponse({ ok: false, error: 'no url' });
+      return;
+    }
+    httpSend(`/formats?url=${encodeURIComponent(targetUrl)}`, null, 'GET')
+      .then(res => sendResponse(res || { ok: false }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
   // استعلام حالة البرنامج المكتبي (السرعة والمهام النشطة)
   if (msg.type === 'getAppStatus') {
     httpSend('/summary', null, 'GET').then(summary => {
@@ -302,6 +315,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'controlAll') {
     const action = msg.action; // 'pauseAll' أو 'resumeAll'
     httpSend(`/${action}`, {}, 'POST').then(res => {
+      sendResponse({ ok: !!res });
+    }).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  // فتح وتشغيل البرنامج أو إظهاره
+  if (msg.type === 'launchApp') {
+    httpSend('/launch', {}, 'POST').then(res => {
+      sendResponse({ ok: !!res });
+    }).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  // تبديل النافذة العائمة
+  if (msg.type === 'toggleFloat') {
+    httpSend('/float/toggle', {}, 'POST').then(res => {
       sendResponse({ ok: !!res });
     }).catch(() => sendResponse({ ok: false }));
     return true;

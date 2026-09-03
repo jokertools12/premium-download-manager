@@ -27,6 +27,11 @@ const { parseCliArgs } = require('./cli');
 const { setupIpc } = require('./ipc');
 const { PluginManager } = require('./plugins/PluginManager');
 const { HostRegistrar } = require('./integrations/HostRegistrar');
+const NetworkBonding = require('./engine/NetworkBonding');
+const ThreatShield = require('./engine/ThreatShield');
+const MediaTranscoder = require('./integrations/MediaTranscoder');
+const TelegramCompanion = require('./integrations/TelegramCompanion');
+const ContentSummarizer = require('./ai/ContentSummarizer');
 
 // وضع مضيف Native Messaging: المتصفح يشغّل البرنامج نفسه كمضيف
 const HOST_MODE = process.argv.some(a => /^chrome-extension:\/\//i.test(a)) || process.argv.includes('--native-host');
@@ -45,6 +50,11 @@ let telemetry = null;
 let mobileCompanion = null;
 let rssFeedManager = null;
 let webhooks = null;
+let networkBonding = null;
+let threatShield = null;
+let mediaTranscoder = null;
+let telegramCompanion = null;
+let contentSummarizer = null;
 let quitting = false;
 
 const gotLock = app.requestSingleInstanceLock();
@@ -126,7 +136,7 @@ function createFloatWindow() {
     } catch (_e) {}
   });
 
-  floatWin.loadFile(path.join(__dirname, '..', 'renderer', 'float.html'));
+  floatWin.loadURL('app://local/float.html');
   floatWin.on('close', (e) => {
     if (!quitting) {
       e.preventDefault();
@@ -341,6 +351,15 @@ if (HOST_MODE) {
     rssFeedManager = new RssFeedManager({ engine, db });
     rssFeedManager.start();
 
+    // منظومة v6.0 Ultra Ecosystem المتقدمة
+    networkBonding = new NetworkBonding({ enabled: false });
+    threatShield = new ThreatShield({
+      quarantineDir: path.join(app.getPath('userData'), 'quarantine')
+    });
+    mediaTranscoder = new MediaTranscoder(path.join(app.getPath('userData'), 'bin'));
+    telegramCompanion = new TelegramCompanion(db.getSettings().telegram || {});
+    contentSummarizer = new ContentSummarizer();
+
     engine.on('updated', (snap) => {
       const summary = combinedSummary();
       if (win && !win.isDestroyed()) {
@@ -377,6 +396,7 @@ if (HOST_MODE) {
         if (snap.status === 'completed') {
           pluginManager.emitTaskCompleted(snap);
           webhooks.dispatch('task:completed', snap);
+          if (telegramCompanion) telegramCompanion.notifyDownloadComplete(snap).catch(() => {});
         } else if (snap.status === 'failed') {
           pluginManager.emitTaskFailed(snap);
           webhooks.dispatch('task:failed', snap);
@@ -451,7 +471,12 @@ if (HOST_MODE) {
       mobileCompanion,
       rssFeedManager,
       webhooks,
-      linkInspector: new LinkInspector()
+      linkInspector: new LinkInspector(),
+      networkBonding,
+      threatShield,
+      mediaTranscoder,
+      telegramCompanion,
+      contentSummarizer
     });
 
     createWindow();
@@ -471,6 +496,7 @@ if (HOST_MODE) {
       version: app.getVersion(),
       videoDir: () => path.join(engine.settings.downloadDir, (engine.settings.categoryDirs || {}).video || 'Videos'),
       onFocus: showWindow,
+      onFloatToggle: toggleFloat,
       mobileCompanion,
       qm
     });

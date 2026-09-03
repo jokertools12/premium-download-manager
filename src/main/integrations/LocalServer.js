@@ -5,15 +5,16 @@ const MediaStreamer = require('../engine/MediaStreamer');
 
 // خادم محلي متقدم يدعم إضافة المتصفح، تطبيق الموبايل، وواجهة REST API العامة (المراحل 10.1 و 12.2)
 class LocalServer {
-  constructor({ port, engine, video, videoDir, version, onFocus, mobileCompanion, qm }) {
+  constructor({ port, engine, video, videoDir, version, onFocus, mobileCompanion, qm, onFloatToggle } = {}) {
     this.port = port;
     this.engine = engine;
     this.video = video || null;
-    this.videoDir = videoDir || (() => engine.settings.downloadDir);
+    this.videoDir = videoDir || (() => (engine && engine.settings && engine.settings.downloadDir) || '');
     this.version = version || '';
     this.onFocus = onFocus || (() => {});
     this.mobileCompanion = mobileCompanion || null;
     this.qm = qm || null;
+    this.onFloatToggle = onFloatToggle || null;
     this.server = null;
   }
 
@@ -62,6 +63,29 @@ class LocalServer {
         const authHeader = req.headers['authorization'] || '';
         const token = authHeader.replace(/^Bearer\s+/i, '').trim() || urlObj.searchParams.get('token');
         const isLocalHost = req.socket.remoteAddress === '127.0.0.1' || req.socket.remoteAddress === '::1';
+
+        // استعلام الجودات المتاحة للفيديو ديناميكياً
+        if ((pathname === '/api/v1/video/formats' || pathname === '/formats') && req.method === 'GET') {
+          const videoUrl = urlObj.searchParams.get('url');
+          if (!videoUrl) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'رابط الفيديو مطلوب' }));
+            return;
+          }
+          if (!this.video || typeof this.video.getFormats !== 'function') {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'محرك الفيديو غير متاح' }));
+            return;
+          }
+          this.video.getFormats(videoUrl).then(info => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, formats: info.formats || [], title: info.title || '' }));
+          }).catch(err => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: String(err && err.message) }));
+          });
+          return;
+        }
 
         // 3. مسار إضافة رابط من ملحق المتصفح (التوافق القديم /add)
         if (req.method === 'POST' && pathname === '/add') {
@@ -143,7 +167,7 @@ class LocalServer {
         }
 
         // 5. مسارات التحكم عن بعد للموبايل (Mobile Remote Controls)
-        if (pathname === '/api/v1/pause-all' && req.method === 'POST') {
+        if ((pathname === '/api/v1/pause-all' || pathname === '/pauseAll') && req.method === 'POST') {
           if (!isLocalHost && this.mobileCompanion && !this.mobileCompanion.validateToken(token)) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'غير مصرح' }));
@@ -156,7 +180,7 @@ class LocalServer {
           return;
         }
 
-        if (pathname === '/api/v1/resume-all' && req.method === 'POST') {
+        if ((pathname === '/api/v1/resume-all' || pathname === '/resumeAll') && req.method === 'POST') {
           if (!isLocalHost && this.mobileCompanion && !this.mobileCompanion.validateToken(token)) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'غير مصرح' }));
@@ -165,6 +189,20 @@ class LocalServer {
           if (this.engine) this.engine.resumeAll();
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, message: 'تم استئناف كافة التحميلات' }));
+          return;
+        }
+
+        if (pathname === '/launch' || pathname === '/focus') {
+          if (this.onFocus) this.onFocus();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        if (pathname === '/float/toggle') {
+          if (this.onFloatToggle) this.onFloatToggle();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
           return;
         }
 
@@ -210,7 +248,7 @@ class LocalServer {
         // مسار ping & status & summary للتكامل التام مع إضافة المتصفح
         if (pathname === '/ping') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '5.0.0' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '6.0.0' }));
           return;
         }
 
@@ -226,7 +264,7 @@ class LocalServer {
             running: true,
             connected: true,
             app: 'PremiumDM',
-            version: this.version || '5.0.0',
+            version: this.version || '6.0.0',
             speed: totalSpeed,
             totalSpeed,
             active: activeCount,

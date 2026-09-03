@@ -5,15 +5,13 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 describe('ميزات وتحسينات الإصدار v4.3.0 (v4.3.0 Features & Resilience)', () => {
-  it('التحقق من صحة أرقام الإصدارات في package.json و manifest.json و background.js', () => {
+  it('التحقق من صحة وتطابق أرقام الإصدارات في package.json و manifest.json و background.js', () => {
     const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
-    expect(pkg.version).toBe('4.3.0');
-
     const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../src/extension/manifest.json'), 'utf8'));
-    expect(manifest.version).toBe('4.3.0');
-
     const bgContent = fs.readFileSync(path.resolve(__dirname, '../../src/extension/background.js'), 'utf8');
-    expect(bgContent).toContain('v4.3.0');
+
+    expect(manifest.version).toBe(pkg.version);
+    expect(bgContent).toContain(`v${pkg.version}`);
   });
 
   it('buildYtDlpArgs: يتضمن --windows-filenames و --no-mtime وقالب التسمية بدون اقتطاع مكسور .80s', async () => {

@@ -47,19 +47,36 @@ function buildYtDlpArgs(task) {
   const t1 = parseTimecode(task.clipEnd);
   const hasClip = t0 !== null && t1 !== null && t1 > t0 && !task.isPlaylist;
 
+  const rawFmt = task.formatId;
+  let fmt;
+  if (audio) {
+    fmt = 'bestaudio/best';
+  } else if (task.isPlaylist) {
+    fmt = rawFmt || 'bestvideo+bestaudio/best';
+  } else {
+    fmt = rawFmt || 'best';
+  }
+
+  // إذا كانت جودة محددة (مثل 1080p أو رقم مسار) بدون صوت، نضيف +bestaudio/best لضمان دمج الصوت دائماً
+  if (!audio && rawFmt && (rawFmt.includes('[height') || /^\d+$/.test(rawFmt)) && !rawFmt.includes('+') && !rawFmt.includes('bestaudio')) {
+    fmt = `${rawFmt}+bestaudio/best`;
+  }
+
+  const merge = task.mergeOutput;
+  const validMerge = merge === 'mp4' || merge === 'mkv';
+
   if (task.isPlaylist) {
     args.push('--yes-playlist');
-    const fmt = audio ? 'bestaudio/best' : (task.formatId || 'bestvideo+bestaudio/best');
     args.push('-f', fmt);
-    if (task.mergeOutput && !audio) args.push('--merge-output-format', task.mergeOutput);
+    if (validMerge && !audio) args.push('--merge-output-format', merge);
     const outTemplate = task.subfolder !== false
       ? path.join(task.dir, '%(playlist_title|Playlist)s/%(playlist_index&{:02d} - |)s%(title)s.%(ext)s')
       : path.join(task.dir, '%(title)s.%(ext)s');
     args.push('-o', outTemplate);
     if (task.items) args.push('--playlist-items', String(task.items));
   } else {
-    const fmt = audio ? 'bestaudio/best' : (task.formatId || 'best');
     args.push('-f', fmt, '--no-playlist');
+    if (validMerge && !audio) args.push('--merge-output-format', merge);
     args.push('-o', path.join(task.dir, '%(title)s.%(ext)s'));
   }
 
@@ -77,10 +94,6 @@ function buildYtDlpArgs(task) {
   /* قص المقطع (4.5) — فيديو مفرد فقط، والنهاية يجب أن تتجاوز البداية */
   if (hasClip) args.push('--download-sections', `*${t0}-${t1}`);
 
-  /* صيغة الدمج (4.2) */
-  const merge = task.mergeOutput;
-  if (merge === 'mp4' || merge === 'mkv') args.push('--merge-output-format', merge);
-
   args.push(
     '--progress-template', 'download:PROG|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress._percent_str)s',
     '--print', 'after_move:DONE|%(filepath)s'
@@ -91,8 +104,7 @@ function buildYtDlpArgs(task) {
     args.push('--ffmpeg-location', task.ffmpegDir);
   }
 
-  const needsMerge = (task.formatId || '').includes('+') ||
-    merge === 'mp4' || merge === 'mkv' || audio || hasClip;
+  const needsMerge = (fmt || '').includes('+') || validMerge || audio || hasClip;
 
   args.push(task.url); // الرابط دائماً أخيراً
   return { args, needsMerge };

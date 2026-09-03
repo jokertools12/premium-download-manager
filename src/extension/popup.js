@@ -91,7 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
   checkStatus();
   setInterval(checkStatus, 2000);
 
-  // 4. Quick controls
+  // 4. Quick controls & dynamic version
+  const verEl = document.getElementById('ver');
+  if (verEl && chrome.runtime && chrome.runtime.getManifest) {
+    verEl.textContent = 'v' + chrome.runtime.getManifest().version;
+  }
+
   document.getElementById('btnResumeAll').onclick = () => {
     chrome.runtime.sendMessage({ type: 'controlAll', action: 'resumeAll' });
     showToast('Resumed all downloads');
@@ -100,6 +105,26 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.sendMessage({ type: 'controlAll', action: 'pauseAll' });
     showToast('Paused all downloads');
   };
+
+  const btnLaunch = document.getElementById('btnLaunchApp');
+  if (btnLaunch) {
+    btnLaunch.onclick = () => {
+      chrome.runtime.sendMessage({ type: 'launchApp' }, res => {
+        if (res && res.ok) showToast('App brought to focus');
+        else showToast('Please start the Premium DM app on your PC');
+      });
+    };
+  }
+
+  const btnFloat = document.getElementById('btnToggleFloat');
+  if (btnFloat) {
+    btnFloat.onclick = () => {
+      chrome.runtime.sendMessage({ type: 'toggleFloat' }, res => {
+        if (res && res.ok) showToast('Toggled Floating Widget');
+        else showToast('Please start Premium DM');
+      });
+    };
+  }
 
   // 5. Tab media streams
   chrome.tabs.query({ active: true, currentWindow: true }, tabs => {

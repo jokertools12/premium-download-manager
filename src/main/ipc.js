@@ -15,7 +15,7 @@ const CommunityRegistry = require('./plugins/CommunityRegistry');
 function setupIpc({
   getWindow, db, engine, video, torrent, updater, host, plugins,
   floatApi, showMain, telemetry, mobileCompanion, rssFeedManager, webhooks,
-  linkInspector
+  linkInspector, networkBonding, threatShield, mediaTranscoder, telegramCompanion, contentSummarizer
 }) {
   const linkInsp = linkInspector || new (require('./engine/LinkInspector'))();
   const smartClassifier = new SmartClassifier();
@@ -488,6 +488,67 @@ function setupIpc({
       case 'win:minimize': win.minimize(); return true;
       case 'win:maximize': if (win.isMaximized()) win.unmaximize(); else win.maximize(); return true;
       case 'win:close': win.hide(); return true;
+
+      // ===== قنوات v6.0 Ultra Ecosystem المتقدمة =====
+      case 'network:getStatus': return networkBonding ? networkBonding.getStatus() : { enabled: false, adapterCount: 0 };
+      case 'network:setBonding': {
+        const en = !!(payload && payload.enabled);
+        if (networkBonding) networkBonding.enabled = en;
+        return { ok: true, enabled: en };
+      }
+      case 'security:scan': {
+        const fp = (payload || {}).filePath;
+        if (!threatShield || !fp) throw new Error('مسار الملف مطلوب');
+        return threatShield.scanFile(fp);
+      }
+      case 'security:quarantine': {
+        const fp = (payload || {}).filePath;
+        if (!threatShield || !fp) throw new Error('مسار الملف مطلوب');
+        return threatShield.quarantineFile(fp);
+      }
+      case 'security:restore': {
+        const qp = (payload || {}).quarantinePath;
+        const op = (payload || {}).originalPath;
+        if (!threatShield || !qp) throw new Error('مسار الحجر الصحي مطلوب');
+        return threatShield.restoreFile(qp, op);
+      }
+      case 'transcode:convert': {
+        if (!mediaTranscoder) throw new Error('محرك التحويل غير متاح');
+        const { source, target, opts } = payload || {};
+        return mediaTranscoder.transcodeAudio(source, target, opts);
+      }
+      case 'transcode:compress': {
+        if (!mediaTranscoder) throw new Error('محرك الضغط غير متاح');
+        const { source, target, opts } = payload || {};
+        return mediaTranscoder.compressVideo(source, target, opts);
+      }
+      case 'transcode:makeGif': {
+        if (!mediaTranscoder) throw new Error('محرك الصور المتحركة غير متاح');
+        const { source, target, opts } = payload || {};
+        return mediaTranscoder.makeGif(source, target, opts);
+      }
+      case 'telegram:test': {
+        const token = (payload || {}).token;
+        const TelegramCompanion = require('./integrations/TelegramCompanion');
+        const testBot = new TelegramCompanion({ botToken: token });
+        return testBot.testConnection();
+      }
+      case 'telegram:save': {
+        const st = payload || {};
+        if (telegramCompanion) {
+          telegramCompanion.botToken = st.botToken || '';
+          telegramCompanion.chatId = st.chatId || '';
+          telegramCompanion.enabled = !!st.enabled;
+        }
+        db.updateSettings({ telegram: st });
+        return { ok: true };
+      }
+      case 'ai:summarizeFile': {
+        const fp = (payload || {}).filePath;
+        const maxPoints = (payload || {}).maxPoints || 5;
+        if (!contentSummarizer || !fp) throw new Error('مسار الملف مطلوب للتلخيص');
+        return contentSummarizer.summarizeFile(fp, maxPoints);
+      }
       default:
         throw new Error('أمر غير معروف: ' + cmd);
     }
