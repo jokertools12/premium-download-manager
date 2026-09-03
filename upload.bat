@@ -1,24 +1,22 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
-title Premium DM — رفع التحديث إلى GitHub
+title Premium Download Manager — Release & Deploy Hub
 cd /d "%~dp0"
-cls
-echo ════════════════════════════════════════════
-echo    Premium Download Manager — رفع التحديث
-echo ════════════════════════════════════════════
+
+:: تفعيل دعم ألوان ANSI المتقدمة في موجه الأوامر
+reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: تشغيل سكربت النشر الذكي المطور
+node scripts\release-all.js %*
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo ❌ فشلت العملية. اضغط أي مفتاح للإغلاق...
+    pause >nul
+    exit /b %ERRORLEVEL%
+)
+
 echo.
-echo  سيرفع السكربت تلقائياً:
-echo    1) بناء ملف EXE
-echo    2) رفع الكود إلى GitHub
-echo    3) إنشاء Release + رفع الملفات
-echo    4) التحديث التلقائي لكل المستخدمين
-echo.
-set /p NEWVER=  اكتب رقم الإصدار الجديد (مثال: 1.0.3) أو Enter لاستخدام الحالي: 
-echo.
-echo  جاري التنفيذ — قد يستغرق بضع دقائق (بناء + رفع 85MB)...
-echo  لا تغلق هذه النافذة حتى تنتهي العملية.
-echo.
-node scripts\release-all.js %NEWVER%
-echo.
-echo ════════════════════════════════════════════
-pause
+echo اضغط أي مفتاح للخروج...
+pause >nul
