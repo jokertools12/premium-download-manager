@@ -176,7 +176,55 @@ export function wireMainUI() {
     }
   });
 
-  // الفرز الفوري (3.1)
+  // الفرز الفوري (3.1) والقائمة المنسدلة المخصصة
+  const sortDropdown = $('#sortDropdown');
+  const sortDropdownBtn = $('#sortDropdownBtn');
+  const sortDropdownLabel = $('#sortDropdownLabel');
+
+  if (sortDropdown && sortDropdownBtn) {
+    sortDropdownBtn.onclick = e => {
+      e.stopPropagation();
+      const isOpen = sortDropdown.classList.contains('open');
+      sortDropdown.classList.toggle('open', !isOpen);
+      sortDropdown.setAttribute('aria-expanded', String(!isOpen));
+    };
+
+    sortDropdown.addEventListener('click', e => {
+      const item = e.target.closest('.dropdown-item');
+      if (!item) return;
+      e.stopPropagation();
+      const val = item.dataset.val;
+      if (!val) return;
+      state.sort.key = val;
+      const nativeSelect = $('#sortKey');
+      if (nativeSelect) nativeSelect.value = val;
+      const labelEl = item.querySelector('.item-label');
+      if (labelEl && sortDropdownLabel) sortDropdownLabel.textContent = labelEl.textContent;
+      for (const it of sortDropdown.querySelectorAll('.dropdown-item')) {
+        const isAct = it === item;
+        it.classList.toggle('active', isAct);
+        it.setAttribute('aria-selected', String(isAct));
+      }
+      sortDropdown.classList.remove('open');
+      sortDropdown.setAttribute('aria-expanded', 'false');
+      render();
+    });
+
+    document.addEventListener('click', e => {
+      if (!sortDropdown.contains(e.target)) {
+        sortDropdown.classList.remove('open');
+        sortDropdown.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && sortDropdown.classList.contains('open')) {
+        sortDropdown.classList.remove('open');
+        sortDropdown.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
   $('#sortKey').onchange = e => { state.sort.key = e.target.value; render(); };
   $('#btnSortDir').onclick = () => {
     state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';

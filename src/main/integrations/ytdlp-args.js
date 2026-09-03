@@ -75,6 +75,11 @@ function buildYtDlpArgs(task) {
     '--print', 'after_move:DONE|%(filepath)s'
   );
 
+  /* مسار أداة الدمج ffmpeg إن وُجد (يوضع دائماً قبل الرابط) */
+  if (task.ffmpegDir) {
+    args.push('--ffmpeg-location', task.ffmpegDir);
+  }
+
   const needsMerge = (task.formatId || '').includes('+') ||
     merge === 'mp4' || merge === 'mkv' || audio || hasClip;
 

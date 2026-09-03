@@ -259,23 +259,35 @@ class DownloadTask extends EventEmitter {
   }
 
   async _probeUrl(url) {
-    let res = await fetch(url, {
-      headers: { 'user-agent': UA, ...this.headers, range: 'bytes=0-0' },
-      redirect: 'follow'
-    });
-
-    // ارتداد ذكي: بعض الخوادم ترفض طلبات النطاق 0-0 برمز 416 أو 400
-    if (!res.ok && (res.status === 416 || res.status === 400)) {
-      if (res.body) { try { res.body.cancel(); } catch (_e) {} }
+    let res = null;
+    let usedRange = true;
+    try {
       res = await fetch(url, {
-        headers: { 'user-agent': UA, ...this.headers },
+        headers: { 'user-agent': UA, ...this.headers, range: 'bytes=0-0' },
         redirect: 'follow'
       });
+    } catch (_e) {
+      res = null;
     }
 
-    if (!res.ok) {
-      if (res.body) { try { res.body.cancel(); } catch (_e) {} }
-      throw new Error('HTTP ' + res.status);
+    // ارتداد ذكي: إذا فشل طلب النطاق 0-0 برمز 416 أو 400 أو 403 أو 404 أو 405 أو 500
+    // نجرب فوراً طلباً عادياً بدون ترويسة Range لتفادي رفض خوادم الملفات وحمايات CDN
+    if (!res || !res.ok) {
+      if (res && res.body) { try { res.body.cancel(); } catch (_e) {} }
+      usedRange = false;
+      try {
+        res = await fetch(url, {
+          headers: { 'user-agent': UA, ...this.headers },
+          redirect: 'follow'
+        });
+      } catch (err) {
+        throw new Error('فشل الاتصال بالخادم: ' + (err.message || err));
+      }
+    }
+
+    if (!res || !res.ok) {
+      if (res && res.body) { try { res.body.cancel(); } catch (_e) {} }
+      throw new Error('HTTP ' + (res ? res.status : '500'));
     }
     this.finalUrl = res.url || url;
     const cd = res.headers.get('content-disposition') || '';
@@ -290,6 +302,7 @@ class DownloadTask extends EventEmitter {
     let ranges = false;
     const contentType = res.headers.get('content-type') || '';
     const cr = res.headers.get('content-range');
+    const acceptRanges = (res.headers.get('accept-ranges') || '').toLowerCase();
     if (res.status === 206 && cr) {
       const total = cr.split('/')[1];
       if (total && total !== '*') size = parseInt(total, 10);
@@ -297,6 +310,7 @@ class DownloadTask extends EventEmitter {
     } else {
       const cl = res.headers.get('content-length');
       if (cl) size = parseInt(cl, 10);
+      ranges = acceptRanges === 'bytes' || (res.status === 206 && usedRange);
     }
     if (res.body) { try { res.body.cancel(); } catch (_e) {} }
     return { size, ranges, filename, contentType };
@@ -582,22 +596,28 @@ class DownloadTask extends EventEmitter {
       this.speed = 0;
       return;
     }
-    // رسالة أوضح لحماية الروابط (403)
-    if (/HTTP 403/.test(msg)) {
-      msg = 'HTTP 403 — الرابط محمي (يتطلب مصدر إحالة Referer). أضف حقل Referer عند الإضافة أو استخدم الإضافة من المتصفح';
+
+    // رسائل توضيحية احترافية لرموز الخطأ الشائعة وتحديد الأخطاء القطعية غير القابلة لإعادة المحاولة
+    let nonRetryable = false;
+    if (/HTTP 404/.test(msg)) {
+      msg = 'HTTP 404 — الملف غير موجود على الخادم (قد يكون الرابط خاطئاً أو منتهياً أو يتطلب تسجيل دخول عبر الإضافة)';
+      nonRetryable = true;
+    } else if (/HTTP 401/.test(msg)) {
+      msg = 'HTTP 401 — يتطلب تسجيل الدخول وبيانات اعتماد مصادقة للوصول إلى الملف';
+      nonRetryable = true;
+    } else if (/HTTP 410/.test(msg)) {
+      msg = 'HTTP 410 — الملف تم حذفه نهائياً من الموقع المصدر';
+      nonRetryable = true;
+    } else if (/HTTP 403/.test(msg)) {
+      msg = 'HTTP 403 — تم رفض الوصول (الرابط محمي أو يتطلب مصدر إحالة Referer أو كوكيز الجلسة من المتصفح)';
+      if (this._mirrorIdx >= this.mirrors.length) nonRetryable = true;
+    } else if (msg.includes('ERR_RANGE_HTML')) {
+      msg = 'الخادم أعاد صفحة ويب بدل الملف — قد يكون الرابط منتهياً أو يتطلب مصادقة';
+      nonRetryable = true;
     }
-    if (msg.includes('ERR_RANGE_HTML')) {
-      msg = 'الخادم أعاد صفحة خطأ بدل الملف — قد يكون الرابط منتهياً أو محمياً';
-    }
-    if (this._retries < MAX_RETRIES && msg !== 'aborted') {
-      this._retries += 1;
-      this.status = 'queued';
-      this._emit();
-      setTimeout(() => {
-        if (!this.paused && !this.aborted && this.status === 'queued') this._resumeInternal();
-      }, 1500 * this._retries);
-    } else if (this.mirrors.length && this._mirrorIdx < this.mirrors.length) {
-      // المصدر الأساسي فشل نهائياً — انتقل تلقائياً للمصدر البديل التالي
+
+    // إذا كانت هناك روابط بديلة (Mirrors) متبقية، نجرب البديل التالي
+    if (this.mirrors.length && this._mirrorIdx < this.mirrors.length) {
       this._mirrorIdx += 1;
       this._retries = 0;
       this._needsReprobe = true;
@@ -606,6 +626,27 @@ class DownloadTask extends EventEmitter {
       setTimeout(() => {
         if (!this.paused && !this.aborted && this.status === 'queued') this._resumeInternal();
       }, 1000);
+      return;
+    }
+
+    // أخطاء غير قابلة للإصلاح بإعادة المحاولة: فشل فوري ومباشر دون تعليق في قيد الانتظار
+    if (nonRetryable) {
+      this.status = 'failed';
+      this.error = msg;
+      this.speed = 0;
+      if (!this.received) this._deleteOnStop = true;
+      return;
+    }
+
+    // للأخطاء القابلة للتعافي (انقطاع اتصال مؤقت): إعادة محاولة مع إشعار بالواجهة
+    if (this._retries < MAX_RETRIES && msg !== 'aborted') {
+      this._retries += 1;
+      this.status = 'queued';
+      this.error = `${msg} (محاولة ${this._retries}/${MAX_RETRIES}...)`;
+      this._emit();
+      setTimeout(() => {
+        if (!this.paused && !this.aborted && this.status === 'queued') this._resumeInternal();
+      }, 1500 * this._retries);
     } else {
       this.status = 'failed';
       this.error = msg;

@@ -30,17 +30,21 @@
   <div id="layout">
     <!-- القائمة الجانبية -->
     <aside id="sidebar" role="navigation" aria-label="Sidebar navigation">
-      <nav id="sideFilters"></nav>
-      <button id="btnDashboard" class="side-item"><span>📊</span><span data-i18n="side.dashboard">الإحصائيات</span></button>
-      <button id="btnHistory" class="side-item"><span>🕘</span><span data-i18n="side.history">السجل</span></button>
-      <button id="btnRules" class="side-item"><span>📐</span><span data-i18n="side.rules">القواعد التلقائية</span></button>
-      <button id="btnRssFeeds" class="side-item"><span>📡</span><span>خلاصات RSS</span></button>
-      <button id="btnOpenCleanup" class="side-item"><span>🧹</span><span>التنظيف الذكي</span></button>
-      <div class="side-sep"></div>
-      <div class="side-title" data-i18n="side.cats">التصنيفات</div>
-      <nav id="sideCats"></nav>
-      <div class="side-flex"></div>
-      <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
+      <div class="sidebar-scroll-wrap">
+        <nav id="sideFilters"></nav>
+        <button id="btnDashboard" class="side-item"><span>📊</span><span data-i18n="side.dashboard">الإحصائيات</span></button>
+        <button id="btnHistory" class="side-item"><span>🕘</span><span data-i18n="side.history">السجل</span></button>
+        <button id="btnRules" class="side-item"><span>📐</span><span data-i18n="side.rules">القواعد التلقائية</span></button>
+        <button id="btnRssFeeds" class="side-item"><span>📡</span><span>خلاصات RSS</span></button>
+        <button id="btnOpenCleanup" class="side-item"><span>🧹</span><span>التنظيف الذكي</span></button>
+        <div class="side-sep"></div>
+        <div class="side-title" data-i18n="side.cats">التصنيفات</div>
+        <nav id="sideCats"></nav>
+      </div>
+      <div class="sidebar-footer">
+        <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
+        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v4.1.0</span></div>
+      </div>
     </aside>
 
     <!-- المحتوى الرئيسي -->
@@ -52,7 +56,42 @@
         <button id="btnGrab" class="btn ghost" data-i18n="toolbar.grab" data-i18n-title="toolbar.grabTitle">🌐 فحص صفحة</button>
         <button id="btnMobilePair" class="btn ghost" title="إقران الموبايل" aria-label="Mobile Companion">📱</button>
         <input id="search" type="text" data-i18n-ph="toolbar.searchPh" placeholder="🔍 ابحث في التحميلات..." aria-label="Search downloads">
-        <select id="sortKey" data-i18n-title="sort.title" aria-label="Sort by">
+        <!-- القائمة المنسدلة المخصصة للترتيب والفلترة -->
+        <div class="custom-dropdown" id="sortDropdown" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+          <button id="sortDropdownBtn" class="dropdown-trigger" type="button" aria-label="Sort options">
+            <span class="dropdown-icon">⇅</span>
+            <span id="sortDropdownLabel">الأحدث</span>
+            <span class="dropdown-arrow">▾</span>
+          </button>
+          <div id="sortDropdownMenu" class="dropdown-menu" role="listbox">
+            <div class="dropdown-item active" data-val="createdAt" role="option" aria-selected="true">
+              <span class="item-icon">📅</span>
+              <span class="item-label" data-i18n="sort.date">الأحدث</span>
+              <span class="item-check">✓</span>
+            </div>
+            <div class="dropdown-item" data-val="name" role="option" aria-selected="false">
+              <span class="item-icon">🔤</span>
+              <span class="item-label" data-i18n="sort.name">الاسم</span>
+              <span class="item-check">✓</span>
+            </div>
+            <div class="dropdown-item" data-val="size" role="option" aria-selected="false">
+              <span class="item-icon">📦</span>
+              <span class="item-label" data-i18n="sort.size">الحجم</span>
+              <span class="item-check">✓</span>
+            </div>
+            <div class="dropdown-item" data-val="speed" role="option" aria-selected="false">
+              <span class="item-icon">⚡</span>
+              <span class="item-label" data-i18n="sort.speed">السرعة</span>
+              <span class="item-check">✓</span>
+            </div>
+            <div class="dropdown-item" data-val="status" role="option" aria-selected="false">
+              <span class="item-icon">🚦</span>
+              <span class="item-label" data-i18n="sort.status">الحالة</span>
+              <span class="item-check">✓</span>
+            </div>
+          </div>
+        </div>
+        <select id="sortKey" hidden data-i18n-title="sort.title" aria-label="Sort by">
           <option value="createdAt" data-i18n="sort.date">الأحدث</option>
           <option value="name" data-i18n="sort.name">الاسم</option>
           <option value="size" data-i18n="sort.size">الحجم</option>

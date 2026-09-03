@@ -74,6 +74,9 @@ class LocalServer {
               if (/^https?:\/\//i.test(url)) {
                 const headers = {};
                 if (msg.referrer) headers.referer = msg.referrer;
+                if (msg.cookies) headers.cookie = msg.cookies;
+                if (msg.userAgent) headers['user-agent'] = msg.userAgent;
+                if (msg.headers && typeof msg.headers === 'object') Object.assign(headers, msg.headers);
                 if (this.video && (msg.video || this.video.isStreamUrl(url))) {
                   this.video.autoDownload(url, this.videoDir());
                 } else {

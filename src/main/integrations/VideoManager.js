@@ -271,7 +271,7 @@ class VideoManager extends EventEmitter {
 
     out.push({
       id: 'bestvideo+bestaudio/best',
-      label: '⭐ الأفضل جودة متاحة (دمج تلقائي)',
+      label: '⭐ الأفضل جودة تلقائياً (صوت وصورة مدمجان)',
       size: null, merge: true, kind: 'best'
     });
 
@@ -279,14 +279,27 @@ class VideoManager extends EventEmitter {
       .filter(f => f.vcodec !== 'none' && f.height)
       .sort((a, b) => (b.height - a.height) || ((b.fps || 0) - (a.fps || 0)));
     for (const f of vids) {
-      const key = f.height + '|' + f.ext;
+      const key = f.height + '|' + (f.fps && f.fps > 30 ? f.fps : 30);
       if (seen.has(key)) continue;
       seen.add(key);
+
+      // دمج تلقائي دائماً: إذا كان المسار فيديو فقط (DASH في يوتيوب)، نضيف أفضل مسار صوت تلقائياً
+      const formatId = (f.acodec === 'none')
+        ? `${f.format_id}+bestaudio/best`
+        : f.format_id;
+
+      const heightLabel = f.height >= 2160 ? '4K Ultra HD (2160p)'
+        : f.height >= 1440 ? '2K Quad HD (1440p)'
+        : f.height >= 1080 ? '1080p Full HD'
+        : f.height >= 720 ? '720p HD'
+        : `${f.height}p`;
+      const fpsLabel = f.fps && f.fps > 30 ? ` ${f.fps}fps` : '';
+
       out.push({
-        id: f.format_id,
-        label: `${f.height}p${f.fps && f.fps > 30 ? f.fps : ''} ${f.ext}${f.acodec === 'none' ? ' — فيديو فقط (دمج)' : ' — فيديو+صوت'}`,
+        id: formatId,
+        label: `${heightLabel}${fpsLabel} • فيديو + صوت مدمج (${f.ext || 'mp4'})`,
         size: f.filesize || f.filesize_approx || null,
-        merge: f.acodec === 'none',
+        merge: true,
         kind: 'video'
       });
       if (out.length >= 16) break;
@@ -298,7 +311,7 @@ class VideoManager extends EventEmitter {
     for (const f of auds.slice(0, 4)) {
       out.push({
         id: f.format_id,
-        label: `🎵 صوت ${Math.round(f.abr || f.tbr || 0)}kbps ${f.ext}`,
+        label: `🎵 صوت فقط MP3/AAC (${Math.round(f.abr || f.tbr || 0)}kbps)`,
         size: f.filesize || f.filesize_approx || null,
         merge: false,
         kind: 'audio'
@@ -325,7 +338,7 @@ class VideoManager extends EventEmitter {
     const id = 'vid-' + crypto.randomUUID();
     const task = {
       id, kind: 'video', category: 'video', url,
-      formatId: formatId || 'best', dir,
+      formatId: formatId || 'bestvideo+bestaudio/best', dir,
       filename: '', filePath: null,
       title: title || url,
       isPlaylist: !!playlist,
@@ -337,7 +350,7 @@ class VideoManager extends EventEmitter {
       subsLangs: subsLangs || null,
       clipStart: clipStart || null,
       clipEnd: clipEnd || null,
-      mergeOutput: mergeOutput || null,
+      mergeOutput: mergeOutput || 'mp4',
       cookiesFrom: cookiesFrom || null,
       status: 'downloading', received: 0, size: null, speed: 0, percent: null,
       error: null, createdAt: Date.now(), completedAt: null, phase: 'تهيئة...'
@@ -362,9 +375,9 @@ class VideoManager extends EventEmitter {
         task.received = 0; task.size = null; task.percent = null;
       }
 
-      const built = buildYtDlpArgs(task);
-      const needsMerge = built.needsMerge || this.isStreamUrl(task.url);
-      if (needsMerge && !this.ffmpegDir()) {
+      let ffDir = this.ffmpegDir();
+      const needsMerge = (task.formatId || '').includes('+') || task.mergeOutput || task.audioOnly || this.isStreamUrl(task.url);
+      if (needsMerge && !ffDir) {
         task.phase = 'تنزيل أداة الدمج ffmpeg (مرة واحدة فقط)...';
         this._emit(task);
         await this.ensureFfmpeg((done, total) => {
@@ -374,13 +387,13 @@ class VideoManager extends EventEmitter {
           this._emit(task);
         });
         task.received = 0; task.size = null; task.percent = null;
+        ffDir = this.ffmpegDir();
       }
 
+      task.ffmpegDir = ffDir;
+      const built = buildYtDlpArgs(task);
       await fsp.mkdir(task.dir, { recursive: true });
-      /* built.args يتضمن كل شيء: progress-template و --print والرابط أخيراً */
       const args = built.args;
-      const ffDir = this.ffmpegDir();
-      if (ffDir) args.push('--ffmpeg-location', ffDir);
 
       await new Promise((resolve, reject) => {
         const proc = spawn(this.ytDlpPath, args, { windowsHide: true });

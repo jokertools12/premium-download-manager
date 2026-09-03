@@ -1,13 +1,14 @@
 'use strict';
 
-/* Premium DM Extension v4.0.0 — Professional Download Interception:
+/* Premium DM Extension v4.1.0 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
    4) webRequest: Smart interception for direct download links.
    5) Sniffer & Floating Widget: Capture video/HLS/M3U8 streams.
    6) Right-click: Context menu quick options.
-   7) Daily Stats: Track download count and size per day. */
+   7) Cookie & Session Forwarding: Authenticated downloads support.
+   8) Daily Stats: Track download count and size per day. */
 
 const HOST = 'com.premiumdm.host';
 const EXT_BOOT_TIME = Date.now();
@@ -60,6 +61,17 @@ function badge(text, color = '#4f8cff') {
   } catch (_e) {}
 }
 
+async function getCookiesForUrl(url) {
+  try {
+    if (!chrome.cookies || !chrome.cookies.getAll) return '';
+    const cookies = await chrome.cookies.getAll({ url });
+    if (!cookies || !cookies.length) return '';
+    return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  } catch (_e) {
+    return '';
+  }
+}
+
 async function httpSend(endpoint, body = null, method = 'POST') {
   try {
     const ctl = new AbortController();
@@ -78,6 +90,15 @@ async function httpSend(endpoint, body = null, method = 'POST') {
 }
 
 async function sendToApp(msg) {
+  if (msg && msg.url) {
+    if (!msg.cookies) {
+      msg.cookies = await getCookiesForUrl(msg.url);
+    }
+    if (!msg.userAgent && typeof navigator !== 'undefined') {
+      msg.userAgent = navigator.userAgent;
+    }
+  }
+
   let ok = false;
   try {
     const r = await httpSend('/add', msg);

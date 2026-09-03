@@ -78,6 +78,11 @@ class DownloadEngine extends EventEmitter {
     if (!/^(https?|ftps?):\/\//i.test(url)) throw new Error('رابط غير صالح');
     for (const t of this.tasks.values()) {
       if (t.url === url && ['queued', 'downloading', 'paused'].includes(t.status)) {
+        if (t.status === 'paused') {
+          this.resume(t.id);
+        } else if (t.status === 'queued') {
+          this.downloadNow(t.id);
+        }
         return { existed: true, task: t.snapshot() };
       }
     }
@@ -179,7 +184,18 @@ class DownloadEngine extends EventEmitter {
     for (const t of this.tasks.values()) {
       if (t.status === 'downloading') running++;
     }
-    let slots = Math.max(0, this.settings.maxConcurrent - running);
+    const maxConc = Math.max(1, parseInt(this.settings.maxConcurrent, 10) || 3);
+    let slots = Math.max(0, maxConc - running);
+
+    // التحقق من إدراج كافة المهام المعلقة داخل الطابور لتفادي تعليق أي مهمة
+    const queuedSet = new Set(this.queue);
+    for (const t of this.tasks.values()) {
+      if (t.status === 'queued' && !queuedSet.has(t.id)) {
+        this.queue.push(t.id);
+        queuedSet.add(t.id);
+      }
+    }
+
     const stillQueued = [];
     while (this.queue.length) {
       const id = this.queue.shift();
@@ -232,9 +248,9 @@ class DownloadEngine extends EventEmitter {
     if (!t) return;
     t.paused = false;
     t.aborted = false;
-    if (['paused', 'failed', 'canceled'].includes(t.status)) {
+    if (['paused', 'failed', 'canceled', 'queued'].includes(t.status)) {
       t.status = 'queued';
-      this.queue.push(id);
+      if (!this.queue.includes(id)) this.queue.push(id);
       this._processQueue();
       this._emitAll();
     }
@@ -242,7 +258,7 @@ class DownloadEngine extends EventEmitter {
 
   resumeAll() {
     for (const t of this.tasks.values()) {
-      if (['paused', 'failed'].includes(t.status)) this.resume(t.id);
+      if (['paused', 'failed', 'canceled', 'queued'].includes(t.status)) this.resume(t.id);
     }
   }
 
