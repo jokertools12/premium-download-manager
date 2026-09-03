@@ -126,8 +126,62 @@ button { font-family: inherit; }
   flex: 0 1 260px;
   background: var(--card); border: 1px solid var(--border);
   color: var(--text); border-radius: 10px; padding: 8px 12px; outline: none;
+  transition: all 0.2s ease;
 }
-#search:focus { border-color: var(--accent); }
+#search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+
+/* زر وقائمة الفلترة والترتيب الاحترافية */
+#sortKey {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 30px 8px 14px;
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234f8cff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 10px center;
+  transition: all 0.2s ease;
+}
+[dir="rtl"] #sortKey {
+  padding: 8px 14px 8px 30px;
+  background-position: left 10px center;
+}
+#sortKey:hover {
+  border-color: var(--accent);
+  background-color: var(--card2);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+#sortKey:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+#sortKey option {
+  background-color: #111726;
+  color: #e8edf7;
+  padding: 8px 12px;
+}
+
+#btnSortDir {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  transition: all 0.2s ease;
+}
+#btnSortDir:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
 .spacer { flex: 1; }
 
 .btn {
