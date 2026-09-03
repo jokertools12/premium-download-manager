@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, screen, protocol } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, screen, protocol, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -13,10 +13,14 @@ const Database = require('./db/database');
 const { DownloadEngine } = require('./engine/DownloadEngine');
 const QueueManager = require('./queue/QueueManager');
 const Statistics = require('./stats/Statistics');
+const Telemetry = require('./stats/Telemetry');
 const ClipboardMonitor = require('./integrations/ClipboardMonitor');
 const LocalServer = require('./integrations/LocalServer');
 const VideoManager = require('./integrations/VideoManager');
 const TorrentManager = require('./integrations/TorrentManager');
+const MobileCompanion = require('./integrations/MobileCompanion');
+const RssFeedManager = require('./integrations/RssFeedManager');
+const Webhooks = require('./integrations/Webhooks');
 const Updater = require('./updater');
 const { parseCliArgs } = require('./cli');
 const { setupIpc } = require('./ipc');
@@ -24,7 +28,6 @@ const { PluginManager } = require('./plugins/PluginManager');
 const { HostRegistrar } = require('./integrations/HostRegistrar');
 
 // وضع مضيف Native Messaging: المتصفح يشغّل البرنامج نفسه كمضيف
-// (نتعرف عليه من وسيط chrome-extension:// — يجب معالجته قبل قفل النسخة الواحدة)
 const HOST_MODE = process.argv.some(a => /^chrome-extension:\/\//i.test(a)) || process.argv.includes('--native-host');
 
 let win = null;
@@ -37,6 +40,10 @@ let db = null;
 let engine = null;
 let qm = null;
 let clip = null;
+let telemetry = null;
+let mobileCompanion = null;
+let rssFeedManager = null;
+let webhooks = null;
 let quitting = false;
 
 const gotLock = app.requestSingleInstanceLock();
@@ -66,15 +73,17 @@ function createFloatWindow() {
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
   floatWin.setAlwaysOnTop(true, 'screen-saver');
-  // الموضع الابتدائي: أسفل يمين مساحة العمل
+  // منع النوافذ المنبثقة من النافذة العائمة
+  floatWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   try {
     const wa = screen.getPrimaryDisplay().workArea;
     floatWin.setPosition(wa.x + wa.width - 406, wa.y + wa.height - 146);
-  } catch (_e) { /* موضع افتراضي */ }
+  } catch (_e) {}
   floatWin.loadFile(path.join(__dirname, '..', 'renderer', 'float.html'));
   floatWin.on('close', (e) => {
     if (!quitting) {
@@ -102,7 +111,7 @@ function applyAutoFloat() {
     const sum = combinedSummary();
     if (sum.downloading > 0) showFloat();
     else if (floatWin && floatWin.isVisible()) floatWin.hide();
-  } catch (_e) { /* تجاهل */ }
+  } catch (_e) {}
 }
 
 /* ملخص موحد: التحميلات العادية + الفيديوهات */
@@ -132,9 +141,14 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
+
+  // تدقيق Electron Hardening (المرحلة 7.3): منع أي فتح لنوافذ جديدة غير مرخص بها
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   win.loadURL('app://local/index.html');
   win.once('ready-to-show', () => showWindow());
   win.on('maximize', () => send({ type: 'win', maximized: true }));
@@ -142,7 +156,7 @@ function createWindow() {
   win.on('close', (e) => {
     if (!quitting) {
       e.preventDefault();
-      win.hide(); // يبقى يعمل في شريط المهام
+      win.hide();
     }
   });
 }
@@ -168,21 +182,18 @@ function createTray() {
 }
 
 if (HOST_MODE) {
-  // المتصفح شغّلنا كمضيف: نعالج الرسالة ونخرج دون فتح أي نوافذ أو أقفال
   require('./native-host-mode')();
 } else if (!gotLock) {
   app.quit();
 } else {
-  /* النظام البيئي (5.5): تسجيل مخطط pdm://add?url=... */
   try {
     if (process.defaultApp && process.argv.length >= 2) {
       app.setAsDefaultProtocolClient('pdm', process.execPath, [path.resolve(process.argv[1])]);
     } else {
       app.setAsDefaultProtocolClient('pdm');
     }
-  } catch (_e) { /* قد يكون مسجلاً مسبقاً */ }
+  } catch (_e) {}
 
-  /* توجيه رابط وارد (من CLI أو pdm:// أو مثيل ثانٍ) — بث HLS يتوجه للفيديو */
   function handleIncomingUrl(url) {
     try {
       if (!/^https?:\/\//i.test(String(url || ''))) return false;
@@ -204,15 +215,19 @@ if (HOST_MODE) {
   }
 
   app.on('second-instance', (_e, argv) => {
-    /* النظام البيئي (5.5): add <url> | <url> مباشرة | pdm://add?url=... */
     const r = parseCliArgs(argv);
     if (r.cmd === 'add' && r.url) handleIncomingUrl(r.url);
     showWindow();
   });
 
   app.whenReady().then(() => {
-    /* بروتوكول app:// لخدمة ملفات الواجهة: ضروري لأن وحدات ES Modules
-       تفشل عبر file:// عندما يحتوي مسار التثبيت على مسافات (مثل "downloader manager") */
+    // تقييد أذونات الأجهزة (كاميرا، ميكروفون، إلخ) - المرحلة 7.3
+    if (session.defaultSession) {
+      session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+        callback(false);
+      });
+    }
+
     const RENDERER_ROOT = path.join(__dirname, '..', 'renderer');
     const MIME = {
       '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -220,23 +235,26 @@ if (HOST_MODE) {
       '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
       '.woff': 'font/woff', '.woff2': 'font/woff2', '.map': 'application/json'
     };
-    /* ملفات الوسائط المسموح عرضها داخلياً (معاينة 3.3) — قائمة بيضاء صارمة */
     const MEDIA_MIME = {
       '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
       '.webp': 'image/webp', '.bmp': 'image/bmp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
       '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.m4v': 'video/mp4',
       '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.oga': 'audio/ogg'
     };
+
+    const CSP_HEADER = "default-src 'self' app:; script-src 'self' 'unsafe-inline' app:; style-src 'self' 'unsafe-inline' app:; img-src 'self' app: data:; media-src 'self' app:; connect-src 'self' app: http: https: ws:;";
+
     protocol.handle('app', (req) => {
       try {
         const u = new URL(req.url);
-        /* مسار الوسائط: app://media/<مسار مطلق مُرمَّز> — للمعاينة والمصغرات فقط */
         if (u.host === 'media') {
           const fp = path.normalize(decodeURIComponent(u.pathname.replace(/^\/+/, '')));
           const ext = path.extname(fp).toLowerCase();
           if (!MEDIA_MIME[ext]) return new Response('forbidden', { status: 403 });
           const data = fs.readFileSync(fp);
-          return new Response(data, { headers: { 'content-type': MEDIA_MIME[ext] } });
+          return new Response(data, {
+            headers: { 'content-type': MEDIA_MIME[ext], 'content-security-policy': CSP_HEADER }
+          });
         }
         if (u.host !== 'local') return new Response('not found', { status: 404 });
         const rel = path.normalize(decodeURIComponent(u.pathname)).replace(/^([\\/])+/, '');
@@ -244,38 +262,61 @@ if (HOST_MODE) {
         if (!fp.startsWith(RENDERER_ROOT)) return new Response('forbidden', { status: 403 });
         const data = fs.readFileSync(fp);
         return new Response(data, {
-          headers: { 'content-type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream' }
+          headers: {
+            'content-type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream',
+            'content-security-policy': CSP_HEADER
+          }
         });
       } catch (err) {
         return new Response('not found', { status: 404 });
       }
     });
+
     db = new Database();
     const stats = new Statistics(db);
     engine = new DownloadEngine(db, stats);
     qm = new QueueManager(engine, db);
 
+    // التيليمتري خفيف للأخطاء بموافقة صريحة Opt-In (المرحلة 7.5)
+    telemetry = new Telemetry({
+      appVersion: app.getVersion(),
+      storageDir: app.getPath('userData'),
+      getSettings: () => db.getSettings(),
+      updateSettings: (p) => db.updateSettings(p)
+    });
+
+    // موزع الـ Webhooks (المرحلة 10.4)
+    webhooks = new Webhooks({ db });
+
+    // مرافق الموبايل عبر الواي فاي المحلي (المرحلة 10.1)
+    mobileCompanion = new MobileCompanion({
+      port: 45762,
+      engine,
+      onIncomingUrl: handleIncomingUrl
+    });
+
+    // مدير خلاصات RSS (المرحلة 8.4)
+    rssFeedManager = new RssFeedManager({ engine, db });
+    rssFeedManager.start();
+
     engine.on('updated', (snap) => {
       const summary = combinedSummary();
-      // النافذة الرئيسية: تحديثات تفاضلية خفيفة (full عند تغييرات هيكلية كالحذف)
       if (win && !win.isDestroyed()) {
         win.webContents.send('pdm:event', snap === null
           ? { type: 'tasks', full: true, tasks: engine.list(), summary }
           : { type: 'tasks', tasks: [snap], summary });
       }
-      // النافذة العائمة: تحتاج القائمة الكاملة دائماً
       if (floatWin && !floatWin.isDestroyed()) {
         floatWin.webContents.send('pdm:event', { type: 'tasks', full: true, tasks: engine.list(), summary });
       }
       applyAutoFloat();
     });
 
-    /* فك الأرشيف التلقائي (2.3): بث النتيجة كإشعار في الواجهة */
     engine.on('extracted', (info) => {
       if (win && !win.isDestroyed()) win.webContents.send('pdm:event', { type: 'extracted', ...info });
     });
 
-    /* نظام الإضافات (6.5): إضافات مدمجة + مجلد المستخدم، مع خطافات اكتمال/فشل */
+    // نظام الإضافات (6.5 و 7.6 و 12.1)
     const pluginManager = new PluginManager({
       dirs: [
         path.join(app.getAppPath(), 'plugins-builtin'),
@@ -284,21 +325,29 @@ if (HOST_MODE) {
       engine,
       stateFile: path.join(app.getPath('userData'), 'plugins-state.json')
     });
+
     const _lastStatus = new Map();
     engine.on('updated', (snap) => {
       if (!snap || !snap.id) return;
       const prev = _lastStatus.get(snap.id);
       _lastStatus.set(snap.id, snap.status);
       if (prev && prev !== snap.status) {
-        if (snap.status === 'completed') pluginManager.emitTaskCompleted(snap);
-        else if (snap.status === 'failed') pluginManager.emitTaskFailed(snap);
+        if (snap.status === 'completed') {
+          pluginManager.emitTaskCompleted(snap);
+          webhooks.dispatch('task:completed', snap);
+        } else if (snap.status === 'failed') {
+          pluginManager.emitTaskFailed(snap);
+          webhooks.dispatch('task:failed', snap);
+          telemetry.recordError(snap.error || 'Download failed', `Task: ${snap.filename}`);
+        }
       }
     });
+
     pluginManager.on('plugins-changed', () => send({ type: 'plugins', plugins: pluginManager.list() }));
     pluginManager.on('plugin-error', (e) => send({ type: 'plugin-error', ...e }));
     pluginManager.enableEnabled().catch(() => {});
 
-    // مدير الفيديوهات (yt-dlp)
+    // مدير الفيديوهات
     video = new VideoManager(path.join(app.getPath('userData'), 'bin'));
     video.on('updated', () => {
       const payload = { type: 'videos', videos: video.list(), summary: combinedSummary() };
@@ -307,12 +356,11 @@ if (HOST_MODE) {
       applyAutoFloat();
     });
 
-    /* استخراج MP3 (4.3): بث النتيجة كإشعار في الواجهة */
     video.on('audio-extracted', (info) => {
       if (win && !win.isDestroyed()) win.webContents.send('pdm:event', { type: 'mp3', ...info });
     });
 
-    // مدير التورنت (WebTorrent)
+    // مدير التورنت
     torrent = new TorrentManager();
     torrent.on('updated', () => {
       const payload = { type: 'torrents', torrents: torrent.list(), summary: combinedSummary() };
@@ -321,11 +369,11 @@ if (HOST_MODE) {
       applyAutoFloat();
     });
 
-    // نظام التحديث التلقائي (يعمل في النسخة المثبتة فقط)
+    // التحديث التلقائي
     updater = new Updater({ send, appVersion: app.getVersion() });
     updater.startAutoCheck();
 
-    // مسجل مضيف Native Messaging + تسجيل تلقائي لأول تشغيل للنسخة المثبتة
+    // مسجل مضيف Native Messaging
     const extensionDir = app.isPackaged
       ? path.join(process.resourcesPath, 'extension')
       : path.join(app.getAppPath(), 'src', 'extension');
@@ -336,12 +384,11 @@ if (HOST_MODE) {
       extensionDir
     });
     if (app.isPackaged) {
-      // أعد تسجيل Chrome و Edge دائماً لتحديث الجسر (pdm-host.bat) وملفات المضيف
-      // — مهم بعد الترقية من v1.0.0 كي يعمل وضع --native-host الصحيح.
       host.autoRegisterDefaults();
       db.updateSettings({ hostsRegistered: true });
     }
 
+    // تهيئة قنوات IPC النمطية
     setupIpc({
       getWindow: () => win,
       db,
@@ -355,7 +402,11 @@ if (HOST_MODE) {
         toggle: toggleFloat,
         hide: () => { if (floatWin) floatWin.hide(); }
       },
-      showMain: showWindow
+      showMain: showWindow,
+      telemetry,
+      mobileCompanion,
+      rssFeedManager,
+      webhooks
     });
 
     createWindow();
@@ -367,22 +418,21 @@ if (HOST_MODE) {
       send({ type: 'clipboard', url });
     });
 
-    // خادم محلي لاستقبال الروابط من إضافة المتصفح
+    // خادم محلي + REST API v1 + مرافق الموبايل
     const server = new LocalServer({
       port: 45762,
       engine,
       video,
       version: app.getVersion(),
       videoDir: () => path.join(engine.settings.downloadDir, (engine.settings.categoryDirs || {}).video || 'Videos'),
-      onFocus: showWindow
+      onFocus: showWindow,
+      mobileCompanion
     });
     server.start().catch(() => {});
 
-    /* النظام البيئي (5.5): روابط وردت مع أول تشغيل (CLI أو pdm://) */
     const incoming = parseCliArgs(process.argv);
     if (incoming.cmd === 'add' && incoming.url) handleIncomingUrl(incoming.url);
 
-    // عيّنات السرعة (آخر 60 ثانية) للرسم البياني الحي في لوحة الإحصائيات
     const speedHist = [];
     setInterval(() => {
       const s = combinedSummary();
@@ -397,12 +447,11 @@ if (HOST_MODE) {
     try {
       if (engine) engine.pauseAll();
       if (qm) qm.dispose();
+      if (rssFeedManager) rssFeedManager.stop();
       if (torrent) torrent.destroy();
       if (db) db.save();
-    } catch (_e) { /* تجاهل */ }
+    } catch (_e) {}
   });
 
-  app.on('window-all-closed', () => {
-    /* يبقى يعمل في شريط المهام */
-  });
+  app.on('window-all-closed', () => {});
 }

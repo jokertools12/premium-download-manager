@@ -65,4 +65,15 @@ async function uniquifyPath(dir, filename) {
   return `${base} (${Date.now()})${ext}`;
 }
 
-module.exports = { expandTemplate, uniquifyPath, TOKEN_RE };
+/* تعقيم أسماء الملفات لمنع محارف نظام التشغيل الممنوعة وثغرات مسار المجلدات */
+function sanitize(name) {
+  return String(name || '')
+    .replace(/^(\.\.[\/\\])+/, '')
+    .replace(/[\\/:*?"<>|\r\n\t]+/g, '_')
+    .replace(/^_+/, '')
+    .replace(/^\.+/, '')
+    .trim()
+    .slice(0, 180);
+}
+
+module.exports = { expandTemplate, uniquifyPath, sanitize, TOKEN_RE };

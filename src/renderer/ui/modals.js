@@ -183,14 +183,16 @@ export function wireExtUI() {
   });
 }
 
-/* ===== المكوّنات الإضافية (6.5) ===== */
+/* ===== المكوّنات الإضافية (6.5 و 7.6) ===== */
 export async function renderPluginsList() {
   const el = $('#pluginsList');
   if (!el) return;
   const plugs = await window.pdm.invoke('plugins:list').catch(() => []);
   el.innerHTML = plugs.length ? plugs.map(p => `
-    <div class="row" style="padding:6px 0;">
-      <span style="flex:1" title="${p.description || ''}">🧩 ${p.name} <span class="hint">v${p.version}</span></span>
+    <div class="row" style="padding:6px 0; align-items:center;">
+      <span style="flex:1" title="${p.description || ''}">🧩 ${p.name} <span class="hint">v${p.version}</span>
+        ${!p.trusted ? '<span class="badge" style="background:#f59e0b; color:#000; font-size:0.7rem; padding:1px 5px; border-radius:4px; margin-right:4px;">غير موثق</span>' : '<span class="badge" style="background:#10b981; color:#fff; font-size:0.7rem; padding:1px 5px; border-radius:4px; margin-right:4px;">موثق ✓</span>'}
+      </span>
       <label class="chk" style="display:flex;align-items:center;gap:6px;">
         <input type="checkbox" data-plugid="${p.id}" ${p.enabled ? 'checked' : ''}>
         <span class="hint">${p.enabled ? window.t('plug.on') : window.t('plug.off')}</span>
@@ -203,7 +205,7 @@ export function wirePluginsUI() {
     const cb = e.target.closest('input[data-plugid]');
     if (!cb) return;
     try {
-      await window.pdm.invoke('plugins:toggle', { id: cb.dataset.plugid, enabled: cb.checked });
+      await window.pdm.invoke('plugins:toggle', { id: cb.dataset.plugid, enabled: cb.checked, forceUntrusted: true });
       renderPluginsList();
     } catch (err) {
       toast('⚠️ ' + (err.message || err), 'err');
@@ -229,18 +231,29 @@ export function wireModals() {
       return;
     }
     try {
-      const r = await window.pdm.invoke('add', {
+      const payload = {
         url,
         filename: $('#addName').value.trim() || undefined,
         dir: $('#addDir').value.trim() || undefined,
         referer: $('#addReferer').value.trim() || undefined,
         checksum: $('#addChecksum').value.trim() || undefined,
         mirrors: $('#addMirrors').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-      });
+      };
+
+      const r = await window.pdm.invoke('tasks:add', payload);
+
+      // كشف التكرار (المرحلة 8.5)
+      if (r && r.isDuplicate) {
+        const dup = r.duplicateInfo || {};
+        const proceed = confirm(`⚠️ كشف التكرار عبر السجل:\n${dup.message || 'تم تنزيل هذا الملف مسبقاً!'}\n\nهل ترغب في إعادة تنزيله على أي حال؟`);
+        if (!proceed) return;
+        await window.pdm.invoke('tasks:add', { ...payload, forceDuplicate: true });
+      }
+
       closeModal('addModal');
-      toast(r && r.existed ? window.t('add.existed') : window.t('add.added'), 'ok');
+      toast(window.t('add.added'), 'ok');
     } catch (err) {
-      toast('⚠️ ' + (err.message || err), 'err');
+      toast(err.message || String(err), 'err');
     }
   };
   $('#addUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnStartDownload').click(); });

@@ -1,96 +1,399 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Premium Download Manager — أسرع وأنيق مثل IDM وأكثر</title>
-  <meta name="description" content="مدير تحميل مفتوح المصدر مجاني: تقسيم ذكي متعدد الاتصالات، استئناف، فيديو يوتيوب/تيك توك، تورنت، Site Grabber، وثلاث منصات.">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, sans-serif; }
-    :root { --accent: #4f8cff; --accent2: #7b5cff; --bg: #0b0f1a; --card: #131a2b; --text: #e8edf7; --muted: #8b98b8; }
-    body { background: var(--bg); color: var(--text); line-height: 1.7; }
-    .wrap { max-width: 1060px; margin: 0 auto; padding: 0 20px; }
-    header {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      padding: 64px 0 72px; text-align: center;
-    }
-    header h1 { font-size: 2.4rem; margin-bottom: 10px; }
-    header p { font-size: 1.15rem; opacity: .95; max-width: 640px; margin: 0 auto 28px; }
-    .btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .btn {
-      padding: 13px 30px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 1rem;
-      transition: transform .15s, box-shadow .15s;
-    }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
-    .btn-primary { background: #fff; color: #16213e; }
-    .btn-ghost { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.4); }
-    .plat { margin-top: 14px; color: rgba(255,255,255,.85); font-size: .9rem; }
-    section { padding: 56px 0; }
-    h2 { font-size: 1.6rem; margin-bottom: 26px; text-align: center; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
-    .card {
-      background: var(--card); border: 1px solid #1e2942; border-radius: 14px; padding: 22px;
-    }
-    .card .ic { font-size: 1.9rem; margin-bottom: 10px; }
-    .card h3 { font-size: 1.05rem; margin-bottom: 6px; }
-    .card p { color: var(--muted); font-size: .92rem; }
-    .cta {
-      text-align: center; background: var(--card); border: 1px solid #1e2942;
-      border-radius: 16px; padding: 40px 24px; margin-bottom: 56px;
-    }
-    .cta h2 { margin-bottom: 8px; }
-    .cta p { color: var(--muted); margin-bottom: 22px; }
-    footer { border-top: 1px solid #1c2740; padding: 26px 0; text-align: center; color: var(--muted); font-size: .88rem; }
-    footer a { color: var(--accent); text-decoration: none; }
-  </style>
+  <title>Premium Download Manager — أسرع وأحدث مدير تحميل مفتوح المصدر</title>
+  <meta name="description" content="مدير تحميل فائق السرعة مفتوح المصدر ومجاني 100%: اتصالات متوازية تكيفية حتى 32 خيطاً، زر تحميل الفيديو العائم، تورنت مدمج، ذكاء اصطناعي offline، ومرافق موبايل محلي.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <h1>⚡ Premium Download Manager</h1>
-      <p>مدير تحميل مفتوح المصدر — أسرع من IDM، أجمل منه، وبلا إعلانات. محرك اتصالات تكيفية، فيديو من يوتيوب وتيك توك، تورنت، وموقع رسمي مجاني بالكامل.</p>
-      <div class="btns">
-        <a class="btn btn-primary" href="https://github.com/jokertools12/premium-download-manager/releases/latest" id="dlLink">⬇ تحميل لأجهزة ويندوز</a>
-        <a class="btn btn-ghost" href="https://github.com/jokertools12/premium-download-manager">⭐ GitHub</a>
+  <div class="bg-mesh"></div>
+
+  <!-- شريط التنقل العلوي -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <div class="brand-icon">⚡</div>
+        <span>Premium DM</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features" data-i18n="navFeatures">المميزات</a></li>
+        <li><a href="#workflow" data-i18n="navWorkflow">مسار العمل</a></li>
+        <li><a href="#comparison" data-i18n="navCompare">المقارنة</a></li>
+        <li><a href="#downloads" data-i18n="navDownloads">التنزيل</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="btn-icon" id="btnThemeToggle" title="تبديل المظهر">☀️</button>
+        <button class="btn-icon" id="btnLangToggle" title="Switch Language">English 🌐</button>
+        <a href="https://github.com/jokertools12/premium-download-manager" target="_blank" class="btn btn-secondary" style="padding:8px 16px; font-size:0.85rem;">
+          ⭐ GitHub
+        </a>
       </div>
-      <div class="plat">متوفر لـ: ويندوز (7/10/11) • macOS • Linux (AppImage/deb) — مجاني ومفتوح المصدر (MIT)</div>
+    </div>
+  </nav>
+
+  <!-- القسم الرئيسي (Hero Section) -->
+  <header class="hero">
+    <div class="container">
+      <div class="badge-tag">
+        <span>⚡</span>
+        <span data-i18n="heroTag">الجيل الثالث · v3.0 مفتوح المصدر 100%</span>
+      </div>
+      <h1>
+        <span class="gradient-text" data-i18n="heroTitle">التحميل الخارق، الذكاء الاصطناعي، والحرية التامة</span>
+      </h1>
+      <p data-i18n="heroDesc">
+        أسرع من IDM، أجمل منه، وبلا إعلانات. محرك تقسيم حتى 32 اتصالاً متزامناً، زر تحميل الفيديو العائم، تورنت مدمج، وقواعد ذكية تعمل offline بالكامل.
+      </p>
+      <div class="hero-cta">
+        <a href="#downloads" class="btn btn-primary">
+          <span data-i18n="heroDownload">⬇ تنزيل لـ </span>
+          <span id="heroOsName">Windows</span>
+        </a>
+        <a href="#workflow" class="btn btn-secondary" data-i18n="navWorkflow">
+          🎮 تجربة مسار العمل التفاعلي
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <span>💎</span>
+          <strong data-i18n="statFree">مجاني 100% للأبد</strong>
+        </div>
+        <div class="stat-pill">
+          <span>🛡️</span>
+          <strong data-i18n="statNoAds">بلا إعلانات وبلا تتبع</strong>
+        </div>
+        <div class="stat-pill">
+          <span>🧪</span>
+          <strong data-i18n="statTests">128 اختباراً آلياً ناجحاً</strong>
+        </div>
+      </div>
     </div>
   </header>
 
-  <section>
-    <div class="wrap">
-      <h2>لماذا Premium DM؟</h2>
-      <div class="grid">
-        <div class="card"><div class="ic">⚡</div><h3>اتصالات تكيفية</h3><p>محرك يقسّم الملفات ويوسّع الاتصالات عند السرعة الجيدة ويخفضها عند الاختناق — أقصى استفادة من عرض نطاقك.</p></div>
-        <div class="card"><div class="ic">🎬</div><h3>ملك الوسائط</h3><p>يوتيوب وتيك توك بأي جودة، استخراج MP3 بنقرة، قوائم تشغيل كاملة، قص مقاطع، وترجمات تلقائية.</p></div>
-        <div class="card"><div class="ic">🧲</div><h3>تورنت مدمج</h3><p>ماغنت وملفات تورنت عبر WebTorrent مع اختيار الملفات داخلياً — بدون برامج إضافية.</p></div>
-        <div class="card"><div class="ic">🌐</div><h3>فحص الصفحات</h3><p>Site Grabber يستخرج كل الصور والفيديوهات والملفات من أي صفحة بضغطة واحدة، ومراقبة الحافظة وسحب وإفلات.</p></div>
-        <div class="card"><div class="ic">🧩</div><h3>إضافات متصفح</h3><p>إضافة Chrome/Edge/Firefox تعترض التحميلات قبل أن تبدأ وتلتقط روابط البث HLS مباشرة.</p></div>
-        <div class="card"><div class="ic">🧠</div><h3>قابل للتوسع</h3><p>نظام إضافات Plugins للمطورين، API محلي، CLI، ومخطط pdm:// — أكبر ما تريد.</p></div>
+  <!-- محاكي مسار العمل التفاعلي (Interactive Workflow Simulator) -->
+  <section id="workflow" class="workflow-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag" data-i18n="wfTag">تقنية حصرية</div>
+        <h2 class="section-title" data-i18n="wfTitle">كيف يتفوق محرك Premium DM؟</h2>
+        <p class="section-desc" data-i18n="wfDesc">شاهد محاكاة حية لمسار العمل فائق السرعة من لحظة التقاط الرابط حتى التحقق الآلي.</p>
       </div>
-    </div>
-  </section>
 
-  <section>
-    <div class="wrap">
-      <div class="cta">
-        <h2>جاهز للتجربة؟</h2>
-        <p>مجاني للأبد • بدون إعلانات • بدون تتبع • مفتوح المصدر بالكامل</p>
-        <div class="btns">
-          <a class="btn btn-primary" href="https://github.com/jokertools12/premium-download-manager/releases/latest">⬇ أحدث إصدار</a>
-          <a class="btn btn-ghost" href="https://github.com/jokertools12/premium-download-manager/discussions">💬 انضم للمجتمع</a>
+      <div class="workflow-card">
+        <div class="workflow-steps-nav">
+          <div class="wf-step-item" data-step="1">
+            <div class="wf-step-num">1</div>
+            <div class="wf-step-info">
+              <h4 data-i18n="step1Title">1. الالتقاط الذكي</h4>
+              <span data-i18n="step1Desc">اعتراض فوري عبر الإضافة أو الحافظة</span>
+            </div>
+          </div>
+          <div class="wf-step-item active" data-step="2">
+            <div class="wf-step-num">2</div>
+            <div class="wf-step-info">
+              <h4 data-i18n="step2Title">2. التسريع المتعدد</h4>
+              <span data-i18n="step2Desc">تقسيم إلى 16 اتصالاً متوازياً تكيفياً</span>
+            </div>
+          </div>
+          <div class="wf-step-item" data-step="3">
+            <div class="wf-step-num">3</div>
+            <div class="wf-step-info">
+              <h4 data-i18n="step3Title">3. التوجيه والتحقق</h4>
+              <span data-i18n="step3Desc">فحص SHA-256 وتصنيف ذكي للمجلدات</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ساحة المحاكاة البصرية -->
+        <div class="wf-visualizer">
+          <div style="display:flex; justify-content:space-between; align-items:center; color:#94a3b8; font-size:0.85rem;">
+            <span>📦 Asset_Bundle_v3.iso (1.4 GB)</span>
+            <span id="simStatusText" style="color:#60a5fa; font-weight:600;">جاهز لبدء المحاكاة...</span>
+          </div>
+
+          <!-- شبكة الـ 16 اتصالاً -->
+          <div class="chunks-grid" id="chunksGrid"></div>
+
+          <div class="sim-metrics">
+            <div>
+              <span data-i18n="simSpeed">السرعة الآن: </span>
+              <strong id="simSpeedVal" style="color:#4ade80; font-family:monospace; font-size:1.1rem;">0 B/s</strong>
+            </div>
+            <div>
+              <span data-i18n="simProgress">التقدم: </span>
+              <strong id="simProgVal" style="color:#38bdf8; font-family:monospace; font-size:1.1rem;">0%</strong>
+            </div>
+            <div>
+              <span>الخيوط النشطة: </span>
+              <strong style="color:#a78bfa;">16/16 Workers</strong>
+            </div>
+          </div>
+
+          <button class="btn btn-primary sim-btn-trigger" id="btnStartSim" data-i18n="simStart">
+            ⚡ تشغيل محاكاة التحميل المتعدد
+          </button>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- شبكة المميزات (Features) -->
+  <section id="features" class="container" style="padding: 60px 24px;">
+    <div class="section-header">
+      <div class="section-tag">منظومة متكاملة</div>
+      <h2 class="section-title">كل ما تحتاجه في مدير تحميل عصري</h2>
+      <p class="section-desc">ميزات متطورة صُممت للمستخدم المحترف لتجمع بين السرعة الخارقة والذكاء المحلي.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-box">⚡</div>
+        <h3>محرك اتصالات تكيفية</h3>
+        <p>تقسيم ذكي متقدم للملفات حتى 32 اتصالاً متزامناً مع قياس مستمر لجودة كل خيط وتعديل التوزيع تلقائياً لاستغلال كامل سرعة الإنترنت لديك.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-box">🎬</div>
+        <h3>زر تحميل الفيديو العائم</h3>
+        <p>إضافة متصفح خفيفة تكتشف الفيديوهات في يوتيوب وتويتر وتيك توك وآلاف المواقع وتظهر زراً عائماً فوق المشغل للتحميل الفوري بدقة تصل إلى 4K.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-box">🧲</div>
+        <h3>تورنت وماغنت مدمج</h3>
+        <p>عميل WebTorrent مدمج يتيح تنزيل روابط Magnet والتورنت مع إمكانية استعراض واختيار ملفات معينة فقط دون الحاجة لتثبيت برامج تورنت ثقيلة.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-box">🧠</div>
+        <h3>ذكاء اصطناعي محلي 100%</h3>
+        <p>معالجة لغة طبيعية لقواعد التوجيه (مثل "ضع ملفات zip في الأرشيف")، تعلم سلوك الخوادم عند أخطاء 429، واقتراحات تنظيف ذكية بلا أي اتصال بسحابة.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-box">📱</div>
+        <h3>مرافق الموبايل عبر Wi-Fi</h3>
+        <p>إرسال الروابط من هاتفك إلى جهاز الكمبيوتر بمسح رمز QR واحد على الشبكة المحلية دون الحاجة لتسجيل حساب أو استخدام خوادم وسيطة.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-box">📦</div>
+        <h3>معاينة الأرشيف عن بعد</h3>
+        <p>فحص محتويات ملفات ZIP المضغوطة عن بعد عبر طلبات HTTP Range قبل تحميلها، لاختيار ملف معين وتوفير استهلاك البيانات.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- جدول المقارنة (Comparison Matrix) -->
+  <section id="comparison" class="comparison-section container">
+    <div class="section-header">
+      <div class="section-tag" data-i18n="compTag">المقارنة المباشرة</div>
+      <h2 class="section-title" data-i18n="compTitle">لماذا يتفوق Premium DM على الجميع؟</h2>
+      <p class="section-desc" data-i18n="compDesc">مقارنة هندسية صريحة وشاملة مع أشهر برامج التحميل التجارية والمفتوحة.</p>
+    </div>
+
+    <div class="comparison-wrapper">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>الميزة</th>
+            <th class="highlight">⚡ Premium DM</th>
+            <th>IDM (Internet Download Manager)</th>
+            <th>Free Download Manager (FDM)</th>
+            <th>Motrix</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>التكلفة والرخصة</strong></td>
+            <td class="highlight comp-check">مجاني 100% للأبد (MIT)</td>
+            <td class="comp-cross">مدفوع تجارياً (اشتراك/شراء)</td>
+            <td class="comp-check">مجاني (مغلق المصدر جزئياً)</td>
+            <td class="comp-check">مجاني مفتوح المصدر</td>
+          </tr>
+          <tr>
+            <td><strong>الإعلانات وتتبع البيانات</strong></td>
+            <td class="highlight comp-check">صفر إعلانات وصفر تتبع</td>
+            <td class="comp-cross">نوافذ شراء وتفعيل متكررة</td>
+            <td class="comp-cross">إعلانات وتتبع مدمج</td>
+            <td class="comp-check">بدون إعلانات</td>
+          </tr>
+          <tr>
+            <td><strong>زر تحميل الفيديو العائم</strong></td>
+            <td class="highlight comp-check">✔ نعم (مدمج في الإضافة)</td>
+            <td class="comp-check">✔ نعم</td>
+            <td class="comp-cross">✕ غير متاح</td>
+            <td class="comp-cross">✕ غير متاح</td>
+          </tr>
+          <tr>
+            <td><strong>الذكاء الاصطناعي وقواعد اللغة الطبيعية</strong></td>
+            <td class="highlight comp-check">✔ نعم (محلي Offline-first)</td>
+            <td class="comp-cross">✕ غير متاح</td>
+            <td class="comp-cross">✕ غير متاح</td>
+            <td class="comp-cross">✕ غير متاح</td>
+          </tr>
+          <tr>
+            <td><strong>مرافق الموبايل المحلي (QR Pair)</strong></td>
+            <td class="highlight comp-check">✔ نعم (LAN Wi-Fi فوري)</td>
+            <td class="comp-cross">✕ لا يدعم</td>
+            <td class="comp-cross">✕ يتطلب تطبيقاً خارجياً</td>
+            <td class="comp-cross">✕ لا يدعم</td>
+          </tr>
+          <tr>
+            <td><strong>معاينة الأرشيف عن بعد عبر Range</strong></td>
+            <td class="highlight comp-check">✔ نعم (ZIP Central Directory)</td>
+            <td class="comp-check">✔ نعم لملفات ZIP</td>
+            <td class="comp-cross">✕ غير متاح</td>
+            <td class="comp-cross">✕ غير متاح</td>
+          </tr>
+          <tr>
+            <td><strong>التورنت والماغنت المدمج</strong></td>
+            <td class="highlight comp-check">✔ نعم (مع اختيار الملفات)</td>
+            <td class="comp-cross">✕ لا يدعم التورنت إطلاقاً</td>
+            <td class="comp-check">✔ نعم</td>
+            <td class="comp-check">✔ نعم (Aria2)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- مركز التنزيل متعدد المنصات (Download Hub) -->
+  <section id="downloads" class="downloads-section container">
+    <div class="section-header">
+      <div class="section-tag" data-i18n="dlTag">التثبيت والتشغيل</div>
+      <h2 class="section-title" data-i18n="dlTitle">احصل عليه الآن لنظامك المفضل</h2>
+      <p class="section-desc">متاح مجاناً لويندوز وماك ولينكس بالإضافة لإضافات المتصفحات الرسمية.</p>
+    </div>
+
+    <div class="tab-controls">
+      <button class="tab-btn active" data-tab="win">🪟 Windows</button>
+      <button class="tab-btn" data-tab="mac">🍎 macOS</button>
+      <button class="tab-btn" data-tab="linux">🐧 Linux</button>
+      <button class="tab-btn" data-tab="ext">🌐 إضافات المتصفح</button>
+    </div>
+
+    <!-- لوحة Windows -->
+    <div class="tab-panel active" id="tab_win">
+      <div class="download-box">
+        <h3>Premium Download Manager لنظام ويندوز</h3>
+        <p style="color:#94a3b8; margin: 8px 0 20px;">متوافق مع Windows 10 و Windows 11 (64-bit)</p>
+        <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+          <a href="https://github.com/jokertools12/premium-download-manager/releases/latest" class="btn btn-primary">
+            ⬇ تحميل مثبت ويندوز (.exe)
+          </a>
+          <a href="https://github.com/jokertools12/premium-download-manager/releases/latest" class="btn btn-secondary">
+            📦 نسخة محمولة Portable (.zip)
+          </a>
+        </div>
+        <div class="cli-command-box">
+          <span>winget install jokertools12.PremiumDownloadManager</span>
+          <button class="btn-copy" data-cmd="winget install jokertools12.PremiumDownloadManager">نسخ 📋</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- لوحة macOS -->
+    <div class="tab-panel" id="tab_mac">
+      <div class="download-box">
+        <h3>Premium Download Manager لنظام macOS</h3>
+        <p style="color:#94a3b8; margin: 8px 0 20px;">يدعم معالجات Apple Silicon (M1/M2/M3/M4) ومعالجات Intel</p>
+        <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+          <a href="https://github.com/jokertools12/premium-download-manager/releases/latest" class="btn btn-primary">
+            ⬇ تحميل حزمة أبل DMG
+          </a>
+        </div>
+        <div class="cli-command-box">
+          <span>brew install --cask premium-download-manager</span>
+          <button class="btn-copy" data-cmd="brew install --cask premium-download-manager">نسخ 📋</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- لوحة Linux -->
+    <div class="tab-panel" id="tab_linux">
+      <div class="download-box">
+        <h3>Premium Download Manager لنظام Linux</h3>
+        <p style="color:#94a3b8; margin: 8px 0 20px;">متاح كـ AppImage عالمي وحزمة .deb لتوزيعات دبيان وأوبونتو</p>
+        <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+          <a href="https://github.com/jokertools12/premium-download-manager/releases/latest" class="btn btn-primary">
+            ⬇ تنزيل AppImage
+          </a>
+          <a href="https://github.com/jokertools12/premium-download-manager/releases/latest" class="btn btn-secondary">
+            ⬇ تنزيل حزمة Debian (.deb)
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- لوحة المتصفحات -->
+    <div class="tab-panel" id="tab_ext">
+      <div class="download-box">
+        <h3>إضافة المتصفح الذكية (Browser Extension)</h3>
+        <p style="color:#94a3b8; margin: 8px 0 20px;">اعتراض التنزيلات التلقائي، زر تحميل الفيديو العائم، وحارس بدء التشغيل</p>
+        <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+          <a href="https://chrome.google.com/webstore" target="_blank" class="btn btn-secondary">
+            🌐 إضافة Google Chrome
+          </a>
+          <a href="https://microsoftedge.microsoft.com/addons" target="_blank" class="btn btn-secondary">
+            🌊 إضافة Microsoft Edge
+          </a>
+          <a href="https://addons.mozilla.org" target="_blank" class="btn btn-secondary">
+            🦊 إضافة Mozilla Firefox
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- الفوتر (Footer) -->
   <footer>
-    <div class="wrap">
-      صُنع بحب للمجتمع العربي والمفتوح المصدر •
-      <a href="https://github.com/jokertools12/premium-download-manager">المستودع</a> •
-      <a href="https://github.com/jokertools12/premium-download-manager/blob/main/CONTRIBUTING.md">ساهم في التطوير</a> •
-      <a href="https://github.com/jokertools12/premium-download-manager/issues">بلّغ عن مشكلة</a>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="brand" style="margin-bottom:12px;">
+            <div class="brand-icon">⚡</div>
+            <span>Premium DM</span>
+          </div>
+          <p style="font-size:0.88rem; max-width:320px; line-height:1.7;">
+            مشروع مفتوح المصدر بالكامل، مرخص تحت MIT License. صُمم بحب للمجتمع العربي والعالمي ليقدم أفضل تجربة تحميل خالية من الاحتكار والإعلانات.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h5>المنتج</h5>
+          <ul>
+            <li><a href="#features">المميزات الرئيسية</a></li>
+            <li><a href="#workflow">محاكي مسار العمل</a></li>
+            <li><a href="#comparison">مقارنة مع IDM</a></li>
+            <li><a href="#downloads">مركز التنزيل</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>المجتمع والمطورين</h5>
+          <ul>
+            <li><a href="https://github.com/jokertools12/premium-download-manager" target="_blank">المستودع الرئيسي</a></li>
+            <li><a href="https://github.com/jokertools12/premium-download-manager/discussions" target="_blank">النقاشات والأفكار</a></li>
+            <li><a href="https://github.com/jokertools12/premium-download-manager/issues" target="_blank">الإبلاغ عن أخطاء</a></li>
+            <li><a href="https://github.com/jokertools12/premium-download-manager/blob/main/docs/GOVERNANCE.md" target="_blank">ميثاق الحوكمة</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>الأمان والمصداقية</h5>
+          <ul>
+            <li><span style="color:#10b981;">✔ 100% مجاني للأبد</span></li>
+            <li><span style="color:#10b981;">✔ صفر إعلانات تجارية</span></li>
+            <li><span style="color:#10b981;">✔ كود مفحوص بـ SignPath</span></li>
+            <li><span style="color:#10b981;">✔ لا تتبع ولا جمع بيانات</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>© 2026 Premium Download Manager · برخصة MIT المفتوحة.</div>
+        <div style="font-size:0.85rem; color:#64748b;">v3.0.0 Stable · All Systems Operational</div>
+      </div>
     </div>
   </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>

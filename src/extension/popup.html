@@ -3,87 +3,304 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, sans-serif; }
-    body { width: 320px; background: #0b0f1a; color: #e8edf7; font-size: 13px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, system-ui, sans-serif; }
+    body {
+      width: 350px;
+      background: #0b0f1a;
+      color: #e8edf7;
+      font-size: 13px;
+      overflow-x: hidden;
+    }
     .head {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 12px; background: linear-gradient(135deg, #4f8cff, #7b5cff);
-      font-weight: 700; font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #1e2942 0%, #151d30 100%);
+      border-bottom: 1px solid rgba(79, 140, 255, 0.25);
     }
-    .head .ver { margin-inline-start: auto; font-size: 10.5px; opacity: .85; font-weight: 400; }
-    .sec { padding: 10px 12px; border-bottom: 1px solid #1c2740; }
-    .row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
-    .row label { flex: 1; cursor: pointer; }
-    .row input[type=checkbox] { width: 15px; height: 15px; accent-color: #4f8cff; }
-    .row input[type=number], .row input[type=text] {
-      background: #151d30; border: 1px solid #232f4d; color: #e8edf7;
-      border-radius: 7px; padding: 5px 8px; width: 70px; outline: none;
+    .head .brand {
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #ffffff;
     }
-    .row input[type=text] { width: 100%; }
-    .hint { color: #8b98b8; font-size: 11px; line-height: 1.6; }
-    .recent { max-height: 130px; overflow-y: auto; }
-    .recent .item {
-      padding: 5px 8px; border-radius: 7px; background: #111726;
-      margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      direction: ltr; text-align: left; color: #a9b7d9; font-size: 11px;
+    .head .ver {
+      margin-inline-start: auto;
+      font-size: 11px;
+      background: rgba(79, 140, 255, 0.2);
+      color: #93c5fd;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 600;
     }
-    .btn {
-      width: 100%; margin-top: 6px; padding: 7px;
-      background: #151d30; color: #e8edf7; border: 1px solid #232f4d;
-      border-radius: 8px; cursor: pointer; font-size: 12px;
+
+    /* كارت الحالة والتحكم السريع */
+    .status-card {
+      margin: 12px 14px;
+      padding: 12px;
+      background: #131a2b;
+      border: 1px solid #1e2942;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .btn:hover { border-color: #4f8cff; }
-    .status { padding: 6px 12px; font-size: 11px; }
-    .on { color: #34d399; } .off { color: #f87171; }
-    .del { background: none; border: none; color: #f87171; cursor: pointer; margin-inline-start: 6px; }
-    .stream {
-      padding: 5px 8px; border-radius: 7px; background: #111726;
-      margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
-    .stream .surl {
-      flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      direction: ltr; text-align: left; color: #a9b7d9; font-size: 11px;
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px #34d399;
+      margin-inline-end: 6px;
     }
-    .stream button {
-      background: #1d2a4a; color: #7fb2ff; border: 1px solid #2c3d6b;
-      border-radius: 6px; cursor: pointer; font-size: 11px; padding: 3px 8px; flex-shrink: 0;
+    .status-dot.offline {
+      background: #f87171;
+      box-shadow: 0 0 8px #f87171;
     }
-    .stream button:hover { border-color: #4f8cff; }
+    .quick-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .q-btn {
+      padding: 6px 10px;
+      background: #1a233a;
+      border: 1px solid #2a375a;
+      color: #f0f4fc;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .q-btn:hover {
+      background: #233050;
+      border-color: #4f8cff;
+    }
+
+    .sec {
+      padding: 10px 14px;
+      border-bottom: 1px solid #161f33;
+    }
+    .sec-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      cursor: pointer;
+    }
+    .toggle-row label {
+      cursor: pointer;
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+    }
+    .toggle-row label small {
+      color: #94a3b8;
+      font-size: 10.5px;
+      margin-top: 1px;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #4f8cff;
+      cursor: pointer;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    input[type="text"], input[type="number"] {
+      background: #141b2c;
+      border: 1px solid #222d48;
+      color: #e8edf7;
+      border-radius: 6px;
+      padding: 6px 8px;
+      outline: none;
+      font-size: 12px;
+    }
+    input[type="text"] { width: 100%; }
+    input[type="number"] { width: 65px; }
+
+    .btn-action {
+      width: 100%;
+      padding: 7px;
+      background: #1c2742;
+      border: 1px solid #2c3e6b;
+      color: #e2e8f0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .btn-action:hover {
+      background: #253457;
+      border-color: #4f8cff;
+    }
+
+    .media-list {
+      max-height: 120px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .media-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #121827;
+      border: 1px solid #1c253b;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+    .media-item .m-url {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      direction: ltr;
+      text-align: left;
+      color: #94a3b8;
+      margin-inline-end: 6px;
+    }
+    .m-btn {
+      padding: 3px 8px;
+      background: rgba(79, 140, 255, 0.2);
+      border: 1px solid rgba(79, 140, 255, 0.4);
+      color: #93c5fd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+    .m-btn:hover {
+      background: #4f8cff;
+      color: #fff;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+      max-height: 70px;
+      overflow-y: auto;
+    }
+    .tag {
+      background: #182238;
+      border: 1px solid #233050;
+      color: #cbd5e1;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-del {
+      cursor: pointer;
+      color: #f87171;
+    }
   </style>
 </head>
 <body>
-  <div class="head">⚡ Premium DM <span class="ver" id="ver"></span></div>
+  <div class="head">
+    <div class="brand">⚡ Premium DM</div>
+    <span class="ver" id="ver">v2.2.0</span>
+  </div>
 
+  <!-- كارت الاتصال والتحكم السريع -->
+  <div class="status-card">
+    <div class="status-row">
+      <div>
+        <span class="status-dot" id="dotStatus"></span>
+        <span id="txtConnStatus" style="font-weight:600;">جاري الفحص...</span>
+      </div>
+      <div id="txtLiveSpeed" style="font-family:monospace; color:#4ade80; font-weight:700;">0 B/s</div>
+    </div>
+    <div class="quick-btns">
+      <button class="q-btn" id="btnResumeAll">▶ استئناف الكل</button>
+      <button class="q-btn" id="btnPauseAll">⏸ إيقاف الكل</button>
+    </div>
+  </div>
+
+  <!-- خيارات الحماية والاعتراض -->
   <div class="sec">
-    <div class="row">
-      <label for="enabled">الاعتراض على التحميلات</label>
+    <div class="sec-title">خيارات الاعتراض والأمان</div>
+    <div class="toggle-row">
+      <label for="enabled">
+        <span>الاعتراض التلقائي للتحميلات</span>
+        <small>تحويل الروابط للبرنامج فوراً</small>
+      </label>
       <input type="checkbox" id="enabled" checked>
     </div>
-    <div class="row">
-      <label for="minSize">الحد الأدنى للحجم (MB)</label>
-      <input type="number" id="minSize" min="0" value="0">
+    <div class="toggle-row">
+      <label for="startupGuard">
+        <span>🛡️ حارس بدء التشغيل (Startup Guard)</span>
+        <small>منع التنزيلات العشوائية عند فتح المتصفح</small>
+      </label>
+      <input type="checkbox" id="startupGuard" checked>
     </div>
-    <div class="hint">الملفات الأصغر من هذا الحجم يكمل المتصفح تحميلها بنفسه. كليك يمين على أي رابط يتجاوز الفلتر دائماً.</div>
+    <div class="toggle-row">
+      <label for="showVideoWidget">
+        <span>🎬 زر تحميل الفيديو العائم</span>
+        <small>إظهار زر التحميل فوق المشغلات (مثل IDM)</small>
+      </label>
+      <input type="checkbox" id="showVideoWidget" checked>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <span style="font-size:12px; flex:1;">الحد الأدنى للحجم:</span>
+      <input type="number" id="minSize" min="0" value="0">
+      <span style="font-size:11px; color:#64748b;">MB</span>
+    </div>
   </div>
 
+  <!-- وسائط وبثوث التبويب الحالي -->
   <div class="sec">
-    <div class="hint" style="margin-bottom:5px">المواقع المتجاهلة (اسم الموقع في كل سطر):</div>
-    <div class="row"><input type="text" id="newSite" placeholder="example.com" dir="ltr"></div>
-    <button class="btn" id="addSite">＋ إضافة للمتجاهلة</button>
-    <div id="sites" style="margin-top:6px"></div>
+    <div class="sec-title">📺 وسائط مكتشفة في هذا التبويب</div>
+    <div class="media-list" id="streamsList">
+      <div style="color:#64748b; font-size:11px; text-align:center; padding:10px;">لا توجد وسائط بث نشطة حالياً</div>
+    </div>
   </div>
 
+  <!-- المواقع المستثناة -->
   <div class="sec">
-    <div class="hint" style="margin-bottom:5px">آخر ما تم التقاطه:</div>
-    <div class="recent" id="recent"><div class="hint">لا شيء بعد</div></div>
+    <div class="sec-title">المواقع المتجاهلة (Whitelist)</div>
+    <div class="row">
+      <input type="text" id="newSite" placeholder="example.com" dir="ltr">
+    </div>
+    <button class="btn-action" id="btnAddSite">＋ إضافة موقع</button>
+    <div class="tag-list" id="sitesList"></div>
   </div>
-
-  <div class="sec">
-    <div class="hint" style="margin-bottom:5px">📺 بث HLS/DASH مكتشف في هذا التبويب:</div>
-    <div class="recent" id="streams"><div class="hint">افتح صفحة فيها بث مباشر وستظهر روابطه هنا</div></div>
-  </div>
-
-  <div class="sec status" id="appStatus">…</div>
 
   <script src="popup.js"></script>
 </body>

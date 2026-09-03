@@ -3,74 +3,95 @@
 html, body {
   background: transparent;
   overflow: hidden;
-  font-family: "Segoe UI", Tahoma, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Dynamic Island Capsule 2.0 (المرحلة 14.2) */
 #fcard {
   height: 100vh;
-  background: linear-gradient(160deg, #151d30, #0d1322);
-  border: 1px solid #2a3a63;
-  border-radius: 14px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
-  padding: 9px 12px;
+  background: linear-gradient(135deg, rgba(21, 29, 48, 0.94), rgba(11, 15, 26, 0.98));
+  border: 1px solid rgba(79, 140, 255, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65), 0 0 12px rgba(79, 140, 255, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  justify-content: space-between;
   -webkit-app-region: drag;
-  color: #e8edf7;
+  color: #f0f4fc;
   user-select: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* تأثير التوهج عند سحب رابط فوق الويدجت */
+#fcard.drag-over {
+  border-color: #38bdf8;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.6);
+  transform: scale(1.02);
 }
 
 .f-head { display: flex; align-items: center; gap: 8px; }
-.f-title { font-weight: 700; font-size: 11.5px; color: #8b98b8; letter-spacing: .3px; }
+.f-title { font-weight: 700; font-size: 11.5px; color: #94a3b8; letter-spacing: .3px; }
 .f-badge {
-  background: rgba(79, 140, 255, .18);
-  color: #4f8cff;
-  font-size: 11px;
+  background: rgba(79, 140, 255, .2);
+  color: #60a5fa;
+  font-size: 10.5px;
   font-weight: 700;
-  border-radius: 10px;
-  padding: 1px 8px;
+  border-radius: 8px;
+  padding: 2px 7px;
+  border: 1px solid rgba(79, 140, 255, 0.3);
 }
-.f-btns { margin-inline-start: auto; display: flex; gap: 2px; }
+
+.f-btns { margin-inline-start: auto; display: flex; gap: 4px; }
 .f-btns button {
   -webkit-app-region: no-drag;
-  width: 26px; height: 22px;
-  background: transparent; border: none;
-  color: #8b98b8; cursor: pointer;
+  width: 24px; height: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8; cursor: pointer;
   border-radius: 6px; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
 }
-.f-btns button:hover { background: #1a2440; color: #e8edf7; }
+.f-btns button:hover {
+  background: rgba(79, 140, 255, 0.3);
+  color: #fff;
+  border-color: #4f8cff;
+}
 
 .f-name {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   direction: ltr;
   unicode-bidi: plaintext;
+  color: #f8fafc;
 }
 
 .f-bar {
-  height: 7px;
+  height: 6px;
   border-radius: 6px;
-  background: #0b0f1a;
-  border: 1px solid #232f4d;
+  background: #090d17;
+  border: 1px solid #1c263d;
   overflow: hidden;
 }
 .f-bar > div {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #4f8cff, #7b5cff);
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
   border-radius: 6px;
-  transition: width .4s ease;
+  transition: width .3s ease;
 }
 
 .f-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: #34d399;
 }
-#fPct { color: #8b98b8; }
+#fPct { color: #94a3b8; }

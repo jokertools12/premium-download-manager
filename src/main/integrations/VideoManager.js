@@ -33,10 +33,47 @@ class VideoManager extends EventEmitter {
     this._lastProgEmit = 0;
   }
 
-  hasYtDlp() { return fs.existsSync(this.ytDlpPath); }
+  hasYtDlp() {
+    if (fs.existsSync(this.ytDlpPath)) {
+      try {
+        const stat = fs.statSync(this.ytDlpPath);
+        if (stat.size > 1024 * 512) return true;
+        fs.unlinkSync(this.ytDlpPath);
+      } catch (_e) {}
+    }
+    try {
+      const { execSync } = require('child_process');
+      const cmd = process.platform === 'win32' ? 'where yt-dlp.exe' : 'which yt-dlp';
+      const out = execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 1500 }).toString().trim();
+      if (out) {
+        const first = out.split('\n')[0].trim();
+        if (fs.existsSync(first)) {
+          this.ytDlpPath = first;
+          return true;
+        }
+      }
+    } catch (_e) {}
+    return false;
+  }
 
   ffmpegDir() {
-    return fs.existsSync(path.join(this.binDir, this._bins.ffmpeg.file)) ? this.binDir : null;
+    const localFfmpeg = path.join(this.binDir, this._bins.ffmpeg.file);
+    if (fs.existsSync(localFfmpeg)) {
+      try {
+        if (fs.statSync(localFfmpeg).size > 1024 * 512) return this.binDir;
+        fs.unlinkSync(localFfmpeg);
+      } catch (_e) {}
+    }
+    try {
+      const { execSync } = require('child_process');
+      const cmd = process.platform === 'win32' ? 'where ffmpeg.exe' : 'which ffmpeg';
+      const out = execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'], timeout: 1500 }).toString().trim();
+      if (out) {
+        const first = out.split('\n')[0].trim();
+        if (fs.existsSync(first)) return path.dirname(first);
+      }
+    } catch (_e) {}
+    return null;
   }
 
   totalSpeed() {
@@ -108,7 +145,6 @@ class VideoManager extends EventEmitter {
     this._ensuringFfmpeg = (async () => {
       await fsp.mkdir(this.binDir, { recursive: true });
       const dest = path.join(this.binDir, this._bins.ffmpeg.file);
-      /* ثنائي ffmpeg مفرد (ffmpeg-static) — بلا أرشيف ولا PowerShell */
       await this._downloadFile(this._bins.ffmpeg.url, dest, onProgress);
       if (needsChmod(process.platform)) {
         try { await fsp.chmod(dest, 0o755); } catch (_e) {}
@@ -123,16 +159,24 @@ class VideoManager extends EventEmitter {
     const res = await fetch(url, { redirect: 'follow' });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' أثناء تنزيل ' + url);
     const total = parseInt(res.headers.get('content-length') || '0', 10) || 0;
-    const ws = fs.createWriteStream(dest);
+    const tmpDest = `${dest}.tmp.${Date.now()}`;
+    const ws = fs.createWriteStream(tmpDest);
     let done = 0;
-    for await (const chunk of res.body) {
-      done += chunk.length;
-      if (!ws.write(chunk)) await once(ws, 'drain');
-      if (onProgress) onProgress(done, total);
+    try {
+      for await (const chunk of res.body) {
+        done += chunk.length;
+        if (!ws.write(chunk)) await once(ws, 'drain');
+        if (onProgress) onProgress(done, total);
+      }
+      ws.end();
+      await once(ws, 'finish');
+      await fsp.rename(tmpDest, dest);
+      return dest;
+    } catch (err) {
+      try { ws.destroy(); } catch (_e) {}
+      try { if (fs.existsSync(tmpDest)) fs.unlinkSync(tmpDest); } catch (_e) {}
+      throw err;
     }
-    ws.end();
-    await once(ws, 'finish');
-    return dest;
   }
 
   async _findFile(dir, name) {
@@ -402,12 +446,28 @@ class VideoManager extends EventEmitter {
         proc.on('exit', code => {
           task._proc = null;
           if (task.status === 'canceled') return resolve();
-          if (code === 0 && task.filePath) {
+          if (code === 0) {
+            // محاولة ذكية لالتقاط الملف من المجلد إن لم يُلتقط في مسار الطباعة
+            if (!task.filePath && task.dir && fs.existsSync(task.dir)) {
+              try {
+                const files = fs.readdirSync(task.dir).map(f => ({
+                  name: f,
+                  path: path.join(task.dir, f),
+                  mtime: fs.statSync(path.join(task.dir, f)).mtimeMs
+                })).filter(f => !f.name.endsWith('.part') && !f.name.endsWith('.ytdl'));
+                files.sort((a, b) => b.mtime - a.mtime);
+                if (files.length) {
+                  task.filePath = files[0].path;
+                  task.filename = files[0].name;
+                }
+              } catch (_e) {}
+            }
             task.status = 'completed';
             task.completedAt = Date.now();
             task.speed = 0;
             task.percent = 100;
             task.phase = '';
+            if (!task.filename) task.filename = (task.title || 'video') + '.mp4';
             this._emit(task);
             return resolve();
           }

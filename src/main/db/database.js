@@ -36,7 +36,8 @@ const DEFAULT_SETTINGS = {
   autoFloat: false,
   rules: [],
   language: 'ar',
-  scheduler: { enabled: false, startAt: '', stopAt: '' },
+  scheduler: { enabled: false, startAt: '', stopAt: '', bandwidthRules: [] },
+  telemetryOptIn: null, // null = لم يُسأل بعد، true = موافق، false = رافض
   categoryDirs: {
     video: 'Videos',
     audio: 'Music',
@@ -59,10 +60,7 @@ class Database {
     this._mode = 'json';
     this._sqlite = null;
 
-    // محاولة فتح SQLite؛ عند الفشل نتراجع تلقائياً إلى JSON
-    // ملاحظة: وحدة better-sqlite3 المبنية لـ Node تقبع العملية في Electron
-    // (ABI مختلف)، لذا لا نحاول تحميلها داخل Electron إلا بعد إعادة بنائها
-    // له (أنشئ الملف sqlite-electron-ok في مجلد البيانات بعد الترجمة).
+    // محاولة فتح SQLite بنمط علائقي حقيقي (المرحلة 7.1)
     try {
       const inElectron = !!process.versions.electron;
       const electronOk = fs.existsSync(path.join(APP_DIR, 'sqlite-electron-ok'));
@@ -71,13 +69,8 @@ class Database {
         const BetterSqlite3 = require('better-sqlite3');
         this._sqlite = new BetterSqlite3(path.join(APP_DIR, 'data.db'));
         this._sqlite.pragma('journal_mode = WAL');
-        this._sqlite.exec(`
-          CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
-          CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, v TEXT);
-          CREATE TABLE IF NOT EXISTS resume (id TEXT PRIMARY KEY, v TEXT);
-          CREATE TABLE IF NOT EXISTS stats (d TEXT PRIMARY KEY, bytes INTEGER DEFAULT 0, files INTEGER DEFAULT 0);
-          CREATE TABLE IF NOT EXISTS history (id TEXT PRIMARY KEY, v TEXT);
-        `);
+        this._sqlite.pragma('synchronous = NORMAL');
+        this._initSqliteSchema();
         this._mode = 'sqlite';
       }
     } catch (_e) {
@@ -90,6 +83,177 @@ class Database {
 
   getMode() { return this._mode; }
 
+  /* ===== تهيئة المخطط العلائقي وترقية الجداول القديمة (المرحلة 7.1) ===== */
+  _initSqliteSchema() {
+    if (!this._sqlite) return;
+
+    this._sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
+      CREATE TABLE IF NOT EXISTS stats (d TEXT PRIMARY KEY, bytes INTEGER DEFAULT 0, files INTEGER DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS resume (id TEXT PRIMARY KEY, v TEXT);
+    `);
+
+    // فحص جدول tasks الحالي للتحقق من المخطط العلائقي
+    let migrateTasks = false;
+    try {
+      const info = this._sqlite.prepare("PRAGMA table_info('tasks')").all();
+      if (info.length > 0 && !info.some(c => c.name === 'category')) {
+        migrateTasks = true;
+      }
+    } catch (_e) {}
+
+    if (migrateTasks) {
+      this._migrateTasksTable();
+    } else {
+      this._sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS tasks (
+          id TEXT PRIMARY KEY,
+          url TEXT,
+          filename TEXT,
+          status TEXT,
+          category TEXT,
+          size INTEGER DEFAULT 0,
+          received INTEGER DEFAULT 0,
+          speed_avg INTEGER DEFAULT 0,
+          retry_count INTEGER DEFAULT 0,
+          created_at INTEGER DEFAULT 0,
+          updated_at INTEGER DEFAULT 0,
+          meta TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+        CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category);
+        CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
+        CREATE INDEX IF NOT EXISTS idx_tasks_filename ON tasks(filename);
+      `);
+    }
+
+    // فحص جدول history للتحقق من المخطط العلائقي
+    let migrateHistory = false;
+    try {
+      const hInfo = this._sqlite.prepare("PRAGMA table_info('history')").all();
+      if (hInfo.length > 0 && !hInfo.some(c => c.name === 'category')) {
+        migrateHistory = true;
+      }
+    } catch (_e) {}
+
+    if (migrateHistory) {
+      this._migrateHistoryTable();
+    } else {
+      this._sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS history (
+          id TEXT PRIMARY KEY,
+          url TEXT,
+          filename TEXT,
+          category TEXT,
+          size INTEGER DEFAULT 0,
+          received INTEGER DEFAULT 0,
+          status TEXT,
+          filePath TEXT,
+          ts INTEGER DEFAULT 0,
+          meta TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_history_ts ON history(ts);
+        CREATE INDEX IF NOT EXISTS idx_history_url ON history(url);
+        CREATE INDEX IF NOT EXISTS idx_history_filename ON history(filename);
+      `);
+    }
+  }
+
+  _migrateTasksTable() {
+    try {
+      const oldRows = this._sqlite.prepare('SELECT id, v FROM tasks').all();
+      this._sqlite.exec('DROP TABLE tasks;');
+      this._sqlite.exec(`
+        CREATE TABLE tasks (
+          id TEXT PRIMARY KEY,
+          url TEXT,
+          filename TEXT,
+          status TEXT,
+          category TEXT,
+          size INTEGER DEFAULT 0,
+          received INTEGER DEFAULT 0,
+          speed_avg INTEGER DEFAULT 0,
+          retry_count INTEGER DEFAULT 0,
+          created_at INTEGER DEFAULT 0,
+          updated_at INTEGER DEFAULT 0,
+          meta TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+        CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category);
+        CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
+        CREATE INDEX IF NOT EXISTS idx_tasks_filename ON tasks(filename);
+      `);
+      const stmt = this._sqlite.prepare(`
+        INSERT OR REPLACE INTO tasks 
+        (id, url, filename, status, category, size, received, speed_avg, retry_count, created_at, updated_at, meta)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const tx = this._sqlite.transaction(rows => {
+        for (const r of rows) {
+          try {
+            const t = JSON.parse(r.v);
+            const meta = { ...t };
+            delete meta.id; delete meta.url; delete meta.filename;
+            delete meta.status; delete meta.category; delete meta.size;
+            delete meta.received; delete meta.speed_avg; delete meta.retry_count;
+            delete meta.created_at; delete meta.updated_at;
+            stmt.run(
+              t.id, t.url || '', t.filename || '', t.status || 'queued',
+              t.category || 'other', t.size || 0, t.received || 0,
+              t.speed_avg || 0, t.retry_count || 0,
+              t.createdAt || t.created_at || Date.now(),
+              t.updatedAt || t.updated_at || Date.now(),
+              JSON.stringify(meta)
+            );
+          } catch (_err) {}
+        }
+      });
+      tx(oldRows);
+    } catch (_e) {}
+  }
+
+  _migrateHistoryTable() {
+    try {
+      const oldRows = this._sqlite.prepare('SELECT id, v FROM history').all();
+      this._sqlite.exec('DROP TABLE history;');
+      this._sqlite.exec(`
+        CREATE TABLE history (
+          id TEXT PRIMARY KEY,
+          url TEXT,
+          filename TEXT,
+          category TEXT,
+          size INTEGER DEFAULT 0,
+          received INTEGER DEFAULT 0,
+          status TEXT,
+          filePath TEXT,
+          ts INTEGER DEFAULT 0,
+          meta TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_history_ts ON history(ts);
+        CREATE INDEX IF NOT EXISTS idx_history_url ON history(url);
+        CREATE INDEX IF NOT EXISTS idx_history_filename ON history(filename);
+      `);
+      const stmt = this._sqlite.prepare(`
+        INSERT OR REPLACE INTO history 
+        (id, url, filename, category, size, received, status, filePath, ts, meta)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const tx = this._sqlite.transaction(rows => {
+        for (const r of rows) {
+          try {
+            const h = JSON.parse(r.v);
+            stmt.run(
+              h.id, h.url || '', h.filename || '', h.category || 'other',
+              h.size || 0, h.received || 0, h.status || 'completed',
+              h.filePath || '', h.ts || Date.now(), JSON.stringify(h)
+            );
+          } catch (_err) {}
+        }
+      });
+      tx(oldRows);
+    } catch (_e) {}
+  }
+
   _load() {
     if (this._sqlite) {
       try {
@@ -97,9 +261,8 @@ class Database {
         if (row) this.data.settings = JSON.parse(row.v);
       } catch (_e) {}
       try {
-        this.data.tasks = this._sqlite.prepare('SELECT v FROM tasks').all()
-          .map(r => { try { return JSON.parse(r.v); } catch (_e) { return null; } })
-          .filter(Boolean);
+        const rows = this._sqlite.prepare('SELECT * FROM tasks').all();
+        this.data.tasks = rows.map(r => this._rowToTask(r)).filter(Boolean);
       } catch (_e) {}
       try {
         for (const r of this._sqlite.prepare('SELECT d, bytes, files FROM stats').all()) {
@@ -112,23 +275,60 @@ class Database {
         }
       } catch (_e) {}
       try {
-        this.data.history = this._sqlite.prepare('SELECT v FROM history').all()
-          .map(r => { try { return JSON.parse(r.v); } catch (_e) { return null; } })
-          .filter(Boolean)
-          .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        const hRows = this._sqlite.prepare('SELECT * FROM history ORDER BY ts DESC LIMIT 1000').all();
+        this.data.history = hRows.map(r => this._rowToHistory(r)).filter(Boolean);
       } catch (_e) {}
       this._normalize();
       this._migrateFromJson();
       return;
     }
-    // وضع JSON
+
+    // وضع JSON (Fallback)
     try {
       if (fs.existsSync(this.file)) this.data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
-    } catch (_e) { /* ملف تالف - نبدأ من جديد */ }
+    } catch (_e) {}
     try {
       if (fs.existsSync(this.resumeFile)) this.resume = JSON.parse(fs.readFileSync(this.resumeFile, 'utf8'));
     } catch (_e) { this.resume = {}; }
     this._normalize();
+  }
+
+  _rowToTask(r) {
+    if (!r) return null;
+    let meta = {};
+    try { if (r.meta) meta = JSON.parse(r.meta); } catch (_e) {}
+    return {
+      id: r.id,
+      url: r.url,
+      filename: r.filename,
+      status: r.status,
+      category: r.category,
+      size: r.size || 0,
+      received: r.received || 0,
+      speed_avg: r.speed_avg || 0,
+      retry_count: r.retry_count || 0,
+      createdAt: r.created_at || meta.createdAt || Date.now(),
+      updatedAt: r.updated_at || meta.updatedAt || Date.now(),
+      ...meta
+    };
+  }
+
+  _rowToHistory(r) {
+    if (!r) return null;
+    let meta = {};
+    try { if (r.meta) meta = JSON.parse(r.meta); } catch (_e) {}
+    return {
+      id: r.id,
+      url: r.url,
+      filename: r.filename,
+      category: r.category,
+      size: r.size || 0,
+      received: r.received || 0,
+      status: r.status,
+      filePath: r.filePath,
+      ts: r.ts || Date.now(),
+      ...meta
+    };
   }
 
   _normalize() {
@@ -153,13 +353,31 @@ class Database {
         this.data.settings = { ...this.data.settings, ...old.settings };
         this._persistSettings();
       }
-      if (Array.isArray(old.tasks) && old.tasks.length) {
-        const stmt = this._sqlite.prepare('INSERT OR REPLACE INTO tasks (id, v) VALUES (?, ?)');
-        const tx = this._sqlite.transaction(rows => { for (const t of rows) stmt.run(t.id, JSON.stringify(t)); });
+      if (Array.isArray(old.tasks) && old.tasks.length && this._sqlite) {
+        const stmt = this._sqlite.prepare(`
+          INSERT OR REPLACE INTO tasks 
+          (id, url, filename, status, category, size, received, speed_avg, retry_count, created_at, updated_at, meta)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const tx = this._sqlite.transaction(rows => {
+          for (const t of rows) {
+            const meta = { ...t };
+            delete meta.id; delete meta.url; delete meta.filename;
+            delete meta.status; delete meta.category; delete meta.size;
+            delete meta.received; delete meta.speed_avg; delete meta.retry_count;
+            stmt.run(
+              t.id, t.url || '', t.filename || '', t.status || 'paused',
+              t.category || 'other', t.size || 0, t.received || 0,
+              t.speed_avg || 0, t.retry_count || 0,
+              t.createdAt || Date.now(), t.updatedAt || Date.now(),
+              JSON.stringify(meta)
+            );
+          }
+        });
         tx(old.tasks);
         this.data.tasks = old.tasks;
       }
-      if (old.stats && Object.keys(old.stats).length) {
+      if (old.stats && Object.keys(old.stats).length && this._sqlite) {
         const stmt = this._sqlite.prepare(`
           INSERT INTO stats (d, bytes, files) VALUES (?, ?, ?)
           ON CONFLICT(d) DO UPDATE SET bytes = bytes + excluded.bytes, files = files + excluded.files
@@ -168,14 +386,8 @@ class Database {
           for (const [d, v] of rows) stmt.run(d, v.bytes || 0, v.files || 0);
         });
         tx(Object.entries(old.stats));
-        for (const [d, v] of Object.entries(old.stats)) {
-          this.data.stats[d] = {
-            bytes: (this.data.stats[d] ? this.data.stats[d].bytes : 0) + (v.bytes || 0),
-            files: (this.data.stats[d] ? this.data.stats[d].files : 0) + (v.files || 0)
-          };
-        }
       }
-      if (old.resume && typeof old.resume === 'object') {
+      if (old.resume && typeof old.resume === 'object' && this._sqlite) {
         const stmt = this._sqlite.prepare('INSERT OR REPLACE INTO resume (id, v) VALUES (?, ?)');
         for (const [id, st] of Object.entries(old.resume)) {
           stmt.run(id, JSON.stringify(st));
@@ -184,10 +396,62 @@ class Database {
       }
       fs.renameSync(this.file, this.file + '.migrated');
       try { if (fs.existsSync(this.resumeFile)) fs.renameSync(this.resumeFile, this.resumeFile + '.migrated'); } catch (_e) {}
-    } catch (_e) { /* فشل الترحيل لا يعطل البرنامج */ }
+    } catch (_e) {}
   }
 
   getTasks() { return this.data.tasks; }
+
+  /* استعلام مهام مفهرس فائق السرعة يدعم التصفية والفرز والبحث والتقسيم (المرحلة 7.1) */
+  queryTasks(opts = {}) {
+    const { status, category, search, limit = 0, offset = 0, sortBy = 'created_at', sortDir = 'DESC' } = opts;
+
+    if (this._sqlite) {
+      let sql = 'SELECT * FROM tasks WHERE 1=1';
+      const params = [];
+      if (status) {
+        sql += ' AND status = ?';
+        params.push(status);
+      }
+      if (category && category !== 'all') {
+        sql += ' AND category = ?';
+        params.push(category);
+      }
+      if (search && String(search).trim()) {
+        sql += ' AND (filename LIKE ? OR url LIKE ?)';
+        const term = `%${String(search).trim()}%`;
+        params.push(term, term);
+      }
+      const allowedSort = ['created_at', 'size', 'filename', 'status', 'speed_avg'];
+      const col = allowedSort.includes(sortBy) ? sortBy : 'created_at';
+      const dir = String(sortDir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      sql += ` ORDER BY ${col} ${dir}`;
+      if (limit > 0) {
+        sql += ' LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+      }
+      try {
+        const rows = this._sqlite.prepare(sql).all(...params);
+        return rows.map(r => this._rowToTask(r)).filter(Boolean);
+      } catch (_e) {}
+    }
+
+    // الذاكرة / نمط JSON
+    let res = [...this.data.tasks];
+    if (status) res = res.filter(t => t.status === status);
+    if (category && category !== 'all') res = res.filter(t => t.category === category);
+    if (search && String(search).trim()) {
+      const q = String(search).trim().toLowerCase();
+      res = res.filter(t => (t.filename && t.filename.toLowerCase().includes(q)) || (t.url && t.url.toLowerCase().includes(q)));
+    }
+    const dirMul = String(sortDir).toUpperCase() === 'ASC' ? 1 : -1;
+    res.sort((a, b) => {
+      const va = a[sortBy] ?? a.createdAt ?? 0;
+      const vb = b[sortBy] ?? b.createdAt ?? 0;
+      return va > vb ? dirMul : va < vb ? -dirMul : 0;
+    });
+    if (limit > 0) res = res.slice(offset, offset + limit);
+    return res;
+  }
 
   upsertTask(snap) {
     const rec = { ...snap };
@@ -197,9 +461,31 @@ class Database {
     const i = this.data.tasks.findIndex(t => t.id === snap.id);
     if (i >= 0) this.data.tasks[i] = rec;
     else this.data.tasks.push(rec);
+
     if (this._sqlite) {
-      try { this._sqlite.prepare('INSERT OR REPLACE INTO tasks (id, v) VALUES (?, ?)').run(rec.id, JSON.stringify(rec)); } catch (_e) {}
-    } else this._scheduleSave();
+      try {
+        const meta = { ...rec };
+        delete meta.id; delete meta.url; delete meta.filename;
+        delete meta.status; delete meta.category; delete meta.size;
+        delete meta.received; delete meta.speed_avg; delete meta.retry_count;
+        delete meta.createdAt; delete meta.updatedAt;
+
+        const stmt = this._sqlite.prepare(`
+          INSERT OR REPLACE INTO tasks 
+          (id, url, filename, status, category, size, received, speed_avg, retry_count, created_at, updated_at, meta)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(
+          rec.id, rec.url || '', rec.filename || '', rec.status || 'queued',
+          rec.category || 'other', rec.size || 0, rec.received || 0,
+          rec.speed_avg || 0, rec.retryCount || rec.retry_count || 0,
+          rec.createdAt || Date.now(), Date.now(),
+          JSON.stringify(meta)
+        );
+      } catch (_e) {}
+    } else {
+      this._scheduleSave();
+    }
   }
 
   removeTask(id) {
@@ -247,7 +533,6 @@ class Database {
 
   getResumeState(id) { return this.resume[id] || null; }
 
-  /* ===== سجل التحميل الكامل (3.2) — آخر 1000 عملية ===== */
   getHistory() {
     if (!Array.isArray(this.data.history)) this.data.history = [];
     return this.data.history;
@@ -263,9 +548,26 @@ class Database {
     };
     this.data.history.unshift(entry);
     if (this.data.history.length > 1000) this.data.history.length = 1000;
+
     if (this._sqlite) {
-      try { this._sqlite.prepare('INSERT OR REPLACE INTO history (id, v) VALUES (?, ?)').run(entry.id, JSON.stringify(entry)); } catch (_e) {}
+      try {
+        const meta = { ...entry };
+        delete meta.id; delete meta.url; delete meta.filename;
+        delete meta.category; delete meta.size; delete meta.received;
+        delete meta.status; delete meta.filePath; delete meta.ts;
+
+        this._sqlite.prepare(`
+          INSERT OR REPLACE INTO history 
+          (id, url, filename, category, size, received, status, filePath, ts, meta)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          entry.id, entry.url, entry.filename, entry.category,
+          entry.size, entry.received, entry.status, entry.filePath, entry.ts,
+          JSON.stringify(meta)
+        );
+      } catch (_e) {}
     } else this._scheduleSave();
+
     return entry;
   }
 
@@ -291,6 +593,31 @@ class Database {
         try { this._sqlite.prepare('DELETE FROM resume WHERE id = ?').run(id); } catch (_e) {}
       } else this._scheduleSave();
     }
+  }
+
+  /* كشف التكرار عبر السجل الكامل والمهام النشطة (المرحلة 8.5) */
+  findDuplicate({ url, filename, size }) {
+    const normUrl = url ? String(url).trim().toLowerCase() : null;
+    const normName = filename ? String(filename).trim().toLowerCase() : null;
+
+    // فحص التاريخ أولاً
+    for (const h of this.data.history) {
+      if (normUrl && h.url && h.url.toLowerCase() === normUrl) {
+        return { isDuplicate: true, source: 'history', item: h };
+      }
+      if (normName && size && h.filename && h.filename.toLowerCase() === normName && h.size === size) {
+        return { isDuplicate: true, source: 'history', item: h };
+      }
+    }
+
+    // فحص المهام الحالية
+    for (const t of this.data.tasks) {
+      if (normUrl && t.url && t.url.toLowerCase() === normUrl) {
+        return { isDuplicate: true, source: 'tasks', item: t };
+      }
+    }
+
+    return { isDuplicate: false, item: null };
   }
 
   _persistSettings() {

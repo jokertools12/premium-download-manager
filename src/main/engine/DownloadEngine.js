@@ -360,6 +360,23 @@ class DownloadEngine extends EventEmitter {
     return { ...base, byCategory, active: this.summary(), daily };
   }
 
+  getTask(id) {
+    return this.tasks.get(id) || null;
+  }
+
+  /* استئناف الرابط المنتهي وتحديثه (المرحلة 13.2) */
+  refreshTaskUrl(id, newUrl) {
+    const t = this.tasks.get(id);
+    if (!t) throw new Error('المهمة غير موجودة');
+    t.refreshUrl(newUrl);
+    if (this.db && typeof this.db.upsertTask === 'function') {
+      this.db.upsertTask(t.snapshot());
+    }
+    this.resume(id);
+    this._emitAll();
+    return t.snapshot();
+  }
+
   _emitAll() {
     this.emit('updated', null);
   }

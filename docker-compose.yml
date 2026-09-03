@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  premium-dm:
+    build: .
+    container_name: premium-download-manager
+    restart: unless-stopped
+    ports:
+      - "45762:45762"
+    environment:
+      - PORT=45762
+      - PDM_DOWNLOAD_DIR=/downloads
+      - APPDATA=/data
+    volumes:
+      - ./data:/data
+      - ./downloads:/downloads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:45762/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

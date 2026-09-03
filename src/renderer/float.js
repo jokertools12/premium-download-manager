@@ -27,12 +27,18 @@ window.pdm.invoke('getSettings').then(s => {
 }).catch(() => {});
 
 /* 3.7: سحب رابط إلى النافذة العائمة → افتح النافذة الرئيسية واقترح الرابط */
+const fcard = document.getElementById('fcard');
 document.body.addEventListener('dragover', e => {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'link';
+  if (fcard) fcard.classList.add('drag-over');
+});
+document.body.addEventListener('dragleave', e => {
+  if (fcard && e.target === document.body) fcard.classList.remove('drag-over');
 });
 document.body.addEventListener('drop', e => {
   e.preventDefault();
+  if (fcard) fcard.classList.remove('drag-over');
   const text = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '';
   const m = String(text).match(/https?:\/\/[^\s]+/i);
   if (m) window.pdm.invoke('float:dropUrl', { url: m[0] });

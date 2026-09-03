@@ -5,7 +5,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 const { normalizeChecksum, verifyFile } = require('./checksum');
-const { expandTemplate, uniquifyPath } = require('./naming');
+const { expandTemplate, uniquifyPath, sanitize } = require('./naming');
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 PremiumDM/1.0';
 const MIN_SEGMENT = 1024 * 1024; // أقل حجم لجزء واحد (1MB)
@@ -164,16 +164,17 @@ class DownloadTask extends EventEmitter {
 
   async _initialize() {
     const info = await this._probe();
-    if (info.filename && !this.filename) this.filename = info.filename;
-    if (!this.filename) this.filename = this._defaultName(info.contentType);
+    if (info.filename && !this.filename) this.filename = sanitize(info.filename);
+    if (!this.filename) this.filename = sanitize(this._defaultName(info.contentType));
     // قالب التسمية الذكي (2.5): {date} {time} {site} {name} {ext} {category}
     if (this.nameTemplate && this.nameTemplate.includes('{')) {
       const ext = (path.extname(this.filename) || '').replace(/^\./, '');
       const expanded = expandTemplate(this.nameTemplate, {
         url: this.url, name: this.filename, ext, category: this.category
       });
-      if (expanded) this.filename = expanded;
+      if (expanded) this.filename = sanitize(expanded);
     }
+    this.filename = sanitize(this.filename) || `download-${Date.now()}`;
     this.filePath = path.join(this.dir, this.filename);
     // حل تعارض الأسماء: مهمة جديدة هدفها ملف موجود → اسم فريد
     // (مهام الاستئناف لا تمر هنا أصلاً — لا نكسر استئناف ملف قائم)
@@ -258,10 +259,20 @@ class DownloadTask extends EventEmitter {
   }
 
   async _probeUrl(url) {
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       headers: { 'user-agent': UA, ...this.headers, range: 'bytes=0-0' },
       redirect: 'follow'
     });
+
+    // ارتداد ذكي: بعض الخوادم ترفض طلبات النطاق 0-0 برمز 416 أو 400
+    if (!res.ok && (res.status === 416 || res.status === 400)) {
+      if (res.body) { try { res.body.cancel(); } catch (_e) {} }
+      res = await fetch(url, {
+        headers: { 'user-agent': UA, ...this.headers },
+        redirect: 'follow'
+      });
+    }
+
     if (!res.ok) {
       if (res.body) { try { res.body.cancel(); } catch (_e) {} }
       throw new Error('HTTP ' + res.status);
@@ -273,7 +284,7 @@ class DownloadTask extends EventEmitter {
     if (m) { try { filename = decodeURIComponent(m[1]); } catch (_e) {} }
     if (!filename) {
       m = /filename\s*=\s*"?([^";]+)"?/i.exec(cd);
-      if (m) filename = m[1].trim();
+      if (m) filename = m[1].replace(/["']/g, '').trim();
     }
     let size = null;
     let ranges = false;
@@ -699,6 +710,32 @@ class DownloadTask extends EventEmitter {
       this._timer = null;
     }
     this.speed = 0;
+  }
+
+  /* استئناف الرابط المنتهي (المرحلة 13.2) */
+  refreshUrl(newUrl) {
+    if (!newUrl || !/^https?:\/\//i.test(newUrl)) {
+      throw new Error('الرابط الجديد غير صالح');
+    }
+    this.url = newUrl;
+    this.finalUrl = newUrl;
+    this.error = null;
+    this._retries = 0;
+    if (this.status === 'failed' || this.status === 'paused') {
+      this.status = 'queued';
+    }
+    this._emit();
+    return true;
+  }
+
+  /* تقديم أولوية تحميل مقطع معين للمشاهدة الحية (المرحلة 14.1) */
+  prioritizeOffset(offset) {
+    if (!this.segments || !this.segments.length) return;
+    const targetIdx = this.segments.findIndex(s => !s.done && offset >= s.start && (s.end === null || offset <= s.end));
+    if (targetIdx > 0) {
+      const seg = this.segments.splice(targetIdx, 1)[0];
+      this.segments.unshift(seg);
+    }
   }
 
   _emit() {

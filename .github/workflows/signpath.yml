@@ -1,0 +1,94 @@
+name: Code Signing & Release (SignPath & Notarization)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-sign-windows:
+    name: Build & Sign Windows Executables
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Security & Hardening Audit
+        run: node scripts/security-audit.js
+
+      - name: Run Test Suite
+        run: npm test
+
+      - name: Build Windows Binaries (Unsigned)
+        run: npx electron-builder --win --dir
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # تكامل SignPath Foundation لمشاريع المصادر المفتوحة المعتمدة (المرحلة 7.4)
+      - name: Prepare Artifacts for SignPath
+        run: |
+          mkdir unsigned-dist
+          Compress-Archive -Path dist/win-unpacked/* -DestinationPath unsigned-dist/app.zip
+
+      - name: Sign with SignPath Foundation (OV Code Signing)
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: 'premium-download-manager'
+          signing-policy-slug: 'release-signing'
+          input-artifact-filepath: 'unsigned-dist/app.zip'
+          output-artifact-directory: 'signed-dist'
+          wait-for-completion: true
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+
+      - name: Verify Signed Executable
+        run: node scripts/verify-signing.js
+
+  build-and-notarize-macos:
+    name: Build & Notarize macOS DMG
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build macOS DMG
+        run: npx electron-builder --mac dmg
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTS }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Notarize with Apple notarytool
+        if: env.APPLE_ID != ''
+        run: |
+          xcrun notarytool submit dist/*.dmg --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}" --wait
+          xcrun stapler staple dist/*.dmg
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
