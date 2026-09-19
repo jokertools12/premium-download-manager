@@ -7,6 +7,7 @@ import { render } from './render.js';
 import { openVideoModal } from './video.js';
 
 let inspectTimer = null;
+let currentAddExtra = {};
 
 export async function inspectAddUrl(url) {
   const target = String(url || '').trim();
@@ -69,6 +70,7 @@ export async function inspectAddUrl(url) {
 
 /* ===== إضافة رابط ===== */
 export async function openAdd(url, extra = {}) {
+  currentAddExtra = extra || {};
   $('#addUrl').value = url || '';
   $('#addName').value = extra.filename || '';
   $('#addChecksum').value = '';
@@ -365,22 +367,30 @@ export function wireModals() {
     try {
       const payload = {
         url,
-        filename: $('#addName').value.trim() || undefined,
+        filename: $('#addName').value.trim() || currentAddExtra.filename || undefined,
         dir: $('#addDir').value.trim() || undefined,
-        referer: $('#addReferer').value.trim() || undefined,
+        referer: $('#addReferer').value.trim() || currentAddExtra.referer || undefined,
+        headers: currentAddExtra.headers || undefined,
         checksum: $('#addChecksum').value.trim() || undefined,
         mirrors: $('#addMirrors').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean),
         paused
       };
 
-      const r = await window.pdm.invoke('tasks:add', payload);
+      const r = (window.pdm && window.pdm.tasks && window.pdm.tasks.add)
+        ? await window.pdm.tasks.add(payload)
+        : await window.pdm.invoke('tasks:add', payload);
 
       // كشف التكرار (المرحلة 8.5)
       if (r && r.isDuplicate) {
         const dup = r.duplicateInfo || {};
         const proceed = confirm(`⚠️ كشف التكرار عبر السجل:\n${dup.message || 'تم تنزيل هذا الملف مسبقاً!'}\n\nهل ترغب في إعادة تنزيله على أي حال؟`);
         if (!proceed) return;
-        await window.pdm.invoke('tasks:add', { ...payload, forceDuplicate: true });
+        const forcePayload = { ...payload, forceDuplicate: true };
+        if (window.pdm && window.pdm.tasks && window.pdm.tasks.add) {
+          await window.pdm.tasks.add(forcePayload);
+        } else {
+          await window.pdm.invoke('tasks:add', forcePayload);
+        }
       }
 
       closeModal('addModal');

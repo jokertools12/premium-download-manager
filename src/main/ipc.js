@@ -52,7 +52,7 @@ function setupIpc({
     return db.queryTasks(payload || {});
   });
 
-  ipcMain.handle('tasks:add', async (_e, payload) => {
+  async function handleTasksAdd(payload) {
     validate({ url: { required: true, type: 'string' } }, payload);
     const p = { ...(payload || {}) };
 
@@ -76,7 +76,8 @@ function setupIpc({
     const settings = db.getSettings();
     const routed = RuleEngine.applyRules(p, settings.rules || []);
 
-    const task = engine.addTask(routed);
+    const res = engine.addTask(routed);
+    const task = res && res.task ? res.task : res;
 
     // تسجيل محاولة النطاق لذكاء الخوادم (المرحلة 9.3)
     try {
@@ -85,10 +86,12 @@ function setupIpc({
     } catch (_e) {}
 
     // بث حدث Webhook إن وجد (المرحلة 10.4)
-    if (webhooks) webhooks.dispatch('task:created', { id: task.id, url: task.url, filename: task.filename });
+    if (webhooks && task) webhooks.dispatch('task:created', { id: task.id, url: task.url, filename: task.filename });
 
-    return task;
-  });
+    return res;
+  }
+
+  ipcMain.handle('tasks:add', async (_e, payload) => handleTasksAdd(payload));
 
   ipcMain.handle('tasks:pause', async (_e, id) => {
     validate({ id: { required: true } }, typeof id === 'object' ? id : { id });
@@ -342,32 +345,137 @@ function setupIpc({
   ipcMain.handle('pdm', async (event, cmd, payload) => {
     const win = getWindow();
     switch (cmd) {
+      case 'tasks:list':
       case 'list': return engine.list();
+      case 'tasks:summary':
       case 'summary': return engine.summary();
-      case 'add': return engine.addTask(payload || {});
-      case 'pause': engine.pause(payload); return true;
-      case 'resume': engine.resume(payload); return true;
+      case 'tasks:query': return db.queryTasks(payload || {});
+      case 'tasks:add':
+      case 'add': return handleTasksAdd(payload);
+      case 'tasks:pause':
+      case 'pause': {
+        const id = typeof payload === 'object' && payload ? payload.id || payload : payload;
+        engine.pause(id);
+        return true;
+      }
+      case 'tasks:resume':
+      case 'resume': {
+        const id = typeof payload === 'object' && payload ? payload.id || payload : payload;
+        engine.resume(id);
+        return true;
+      }
+      case 'tasks:pauseAll':
       case 'pauseAll': engine.pauseAll(); return true;
+      case 'tasks:resumeAll':
       case 'resumeAll': engine.resumeAll(); return true;
-      case 'cancel': engine.cancel(payload); return true;
+      case 'tasks:cancel':
+      case 'cancel': {
+        const id = typeof payload === 'object' && payload ? payload.id || payload : payload;
+        engine.cancel(id);
+        return true;
+      }
+      case 'tasks:remove':
       case 'remove': await engine.removeTask(payload || {}); return true;
-      case 'restart': engine.restart(payload); return true;
+      case 'tasks:restart':
+      case 'restart': {
+        const id = typeof payload === 'object' && payload ? payload.id || payload : payload;
+        engine.restart(id);
+        return true;
+      }
+      case 'tasks:clearCompleted':
       case 'clearCompleted':
         engine.clearCompleted();
         if (video) video.clearFinished();
         if (torrent) torrent.clearFinished();
         return true;
+      case 'tasks:moveUp':
       case 'moveUp': engine.moveUp(payload); return true;
+      case 'tasks:moveDown':
       case 'moveDown': engine.moveDown(payload); return true;
+      case 'tasks:downloadNow':
       case 'downloadNow': engine.downloadNow(payload); return true;
+      case 'stats:get':
       case 'getStats': return engine.getDashboardStats();
+      case 'history:get':
       case 'getHistory': return db.getHistory();
+      case 'history:clear':
       case 'clearHistory': db.clearHistory(); return true;
+      case 'history:remove':
       case 'removeHistory': db.removeHistory((payload || {}).id); return true;
       case 'plugins:list': return plugins ? plugins.list() : [];
       case 'plugins:toggle':
         if (!plugins) throw new Error('الإضافات غير متاحة');
         return (payload || {}).enabled ? plugins.enable((payload || {}).id) : plugins.disable((payload || {}).id);
+      case 'plugins:community':
+        return communityRegistry.getCatalogue();
+      case 'plugins:install':
+        validate({ id: { required: true } }, payload);
+        const pInstall = await communityRegistry.install(payload.id);
+        if (plugins) plugins.discover();
+        return pInstall;
+      case 'plugins:uninstall':
+        validate({ id: { required: true } }, payload);
+        const pUninstall = communityRegistry.uninstall(payload.id);
+        if (plugins) plugins.discover();
+        return pUninstall;
+      case 'plugins:verify':
+        validate({ id: { required: true } }, payload);
+        return plugins ? plugins.verifyPlugin(payload.id) : null;
+      case 'archive:preview':
+        validate({ url: { required: true, type: 'string' } }, payload);
+        return ArchivePreview.inspectZip(payload.url, payload.headers);
+      case 'ai:categorize':
+        validate({ url: { required: true, type: 'string' } }, payload);
+        return smartClassifier.classify(payload.url, payload.headers);
+      case 'ai:parseRule':
+        validate({ text: { required: true, type: 'string' } }, payload);
+        return RuleParser.parse(payload.text);
+      case 'ai:suggestCleanup': {
+        const days = (payload && payload.olderThanDays) ? Number(payload.olderThanDays) : 30;
+        return smartCleanup.analyze(days);
+      }
+      case 'ai:executeCleanup':
+        validate({ filePaths: { required: true } }, payload);
+        return smartCleanup.executeCleanup(payload.filePaths);
+      case 'ai:domainStats':
+        return domainIntelligence.getAllStats();
+      case 'mobile:status':
+        if (!mobileCompanion) return { available: false };
+        return {
+          available: true,
+          pairingUrl: mobileCompanion.getPairingUrl(),
+          token: mobileCompanion.token,
+          localIp: mobileCompanion.getLocalIp(),
+          port: mobileCompanion.port
+        };
+      case 'mobile:qrCode':
+        if (!mobileCompanion) return null;
+        return {
+          svg: mobileCompanion.generateQrSvg(),
+          url: mobileCompanion.getPairingUrl()
+        };
+      case 'mobile:rotateToken':
+        if (!mobileCompanion) return null;
+        return mobileCompanion.rotateToken();
+      case 'rss:list':
+        return rssFeedManager ? rssFeedManager.getFeeds() : [];
+      case 'rss:add':
+        validate({ url: { required: true, type: 'string' } }, payload);
+        if (!rssFeedManager) throw new Error('مدير الخلاصات غير مفعل');
+        return rssFeedManager.addFeed(payload);
+      case 'rss:remove':
+        validate({ id: { required: true } }, payload);
+        return rssFeedManager ? rssFeedManager.removeFeed(payload.id) : false;
+      case 'rss:check':
+        validate({ id: { required: true } }, payload);
+        return rssFeedManager ? rssFeedManager.checkFeed(payload.id) : null;
+      case 'telemetry:status':
+        return telemetry ? telemetry.getStatus() : { enabled: false, optIn: false };
+      case 'telemetry:setOptIn':
+        if (telemetry) telemetry.setOptIn(!!(payload && payload.enabled));
+        return { ok: true };
+      case 'telemetry:logs':
+        return telemetry ? telemetry.getRecentLogs() : [];
       case 'link:inspect': return linkInsp.inspect(payload ? payload.url : '', payload || {});
       case 'grab:scan': return scanPage(String((payload || {}).url || ''));
       case 'exportData': {
@@ -461,12 +569,15 @@ function setupIpc({
       case 'ext:openFolder': if (host) shell.openPath(host.extensionDir); return true;
       case 'copyText': clipboard.writeText(String((payload || {}).text || '')); return true;
       case 'openDownloadsFolder': { const s = db.getSettings(); shell.openPath(s.downloadDir); return true; }
+      case 'settings:get':
       case 'getSettings': return db.getSettings();
+      case 'settings:set':
       case 'setSettings': {
         const s = db.updateSettings(payload || {});
         engine.applySettings(s);
         return s;
       }
+      case 'settings:chooseDir':
       case 'chooseDir': {
         const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
         return r.canceled ? null : r.filePaths[0];

@@ -5,7 +5,19 @@ const { contextBridge, ipcRenderer } = require('electron');
 // كشف قنوات IPC النمطية الموثقة مع الحفاظ الكامل على التوافق العكسي (المرحلة 7.2)
 contextBridge.exposeInMainWorld('pdm', {
   // 1. التوافق العكسي
-  invoke: (cmd, payload) => ipcRenderer.invoke('pdm', cmd, payload),
+  invoke: async (cmd, payload) => {
+    if (typeof cmd === 'string' && cmd.includes(':')) {
+      try {
+        return await ipcRenderer.invoke(cmd, payload);
+      } catch (err) {
+        if (err && err.message && (err.message.includes('No handler registered') || err.message.includes('No handler found'))) {
+          return await ipcRenderer.invoke('pdm', cmd, payload);
+        }
+        throw err;
+      }
+    }
+    return ipcRenderer.invoke('pdm', cmd, payload);
+  },
   onEvent: (cb) => ipcRenderer.on('pdm:event', (_e, data) => cb(data)),
   platform: process.platform,
 

@@ -72,13 +72,13 @@ class DownloadEngine extends EventEmitter {
     return t;
   }
 
-  addTask({ url, filename, dir, headers, mirrors, referer, checksum } = {}) {
+  addTask({ url, filename, dir, headers, mirrors, referer, checksum, paused } = {}) {
     url = String(url || '').trim();
     // HTTP/S + FTP/FTPS (2.4)
     if (!/^(https?|ftps?):\/\//i.test(url)) throw new Error('رابط غير صالح');
     for (const t of this.tasks.values()) {
       if (t.url === url && ['queued', 'downloading', 'paused'].includes(t.status)) {
-        if (t.status === 'paused') {
+        if (t.status === 'paused' && !paused) {
           this.resume(t.id);
         } else if (t.status === 'queued') {
           this.downloadNow(t.id);
@@ -112,11 +112,13 @@ class DownloadEngine extends EventEmitter {
       id, url, filename: fname, dir: d, category, headers: allHeaders, mirrors: altMirrors,
       checksum: normalizeChecksum(checksum),
       nameTemplate: String(this.settings.nameTemplate || ''),
-      status: 'queued', createdAt: Date.now()
+      status: paused ? 'paused' : 'queued', createdAt: Date.now()
     });
     this.db.upsertTask(t.snapshot());
-    this.queue.push(id);
-    this._processQueue();
+    if (!paused) {
+      this.queue.push(id);
+      this._processQueue();
+    }
     this._emitAll();
     return { existed: false, task: t.snapshot() };
   }
