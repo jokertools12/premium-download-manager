@@ -76,12 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (res && res.connected) {
         dot.className = 'status-dot';
-        txt.textContent = `Connected (${res.active || 0} active)`;
-        txt.style.color = '#f0f4fc';
+        txt.textContent = `متصل بالبرنامج (${res.active || 0} نشط) — التحميل عبر البرنامج فقط`;
+        txt.style.color = '#34d399';
         spd.textContent = fmtBytes(res.speed || 0) + '/s';
       } else {
         dot.className = 'status-dot offline';
-        txt.textContent = 'Disconnected (start the app)';
+        txt.textContent = 'غير متصل (البرنامج مغلق) — التحميل عبر المتصفح';
         txt.style.color = '#f87171';
         spd.textContent = '0 B/s';
       }

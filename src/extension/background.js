@@ -1,6 +1,6 @@
 'use strict';
 
-/* Premium DM Extension v7.2.1 — Professional Download Interception:
+/* Premium DM Extension v7.2.2 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
@@ -47,6 +47,17 @@ const EXCLUDED_EXT_RE = /\.(crx|xpi|pak|bin|dat|dll)$/i;
 let appConnected = false;
 let lastAppCheck = 0;
 
+function updateBadge(isOpen) {
+  try {
+    if (isOpen) {
+      chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
+      chrome.action.setBadgeText({ text: 'ON' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  } catch (_e) {}
+}
+
 async function checkAppOpen(forceFresh = false) {
   const now = Date.now();
   if (!forceFresh && (now - lastAppCheck) < 2000) {
@@ -63,10 +74,11 @@ async function checkAppOpen(forceFresh = false) {
     appConnected = false;
   }
   lastAppCheck = now;
+  updateBadge(appConnected);
   return appConnected;
 }
 
-// فحص دوري كل 3 ثوانٍ لمعرفة هل البرنامج مفتوح أم لا
+// فحص دوري كل 3 ثوانٍ لمعرفة هل البرنامج مفتوح أم لا وتحديث الشارة
 checkAppOpen(true);
 setInterval(() => { checkAppOpen(true); }, 3000);
 
@@ -265,7 +277,29 @@ chrome.downloads.onCreated.addListener(async item => {
     size: item.totalBytes > 0 ? item.totalBytes : undefined
   });
 
-  if (!sent) {
+  if (sent) {
+    // إشعار فوري داخل صفحة المتصفح الحالية
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'showCaptureToast',
+          filename: filename || 'ملف جديد'
+        }).catch(() => {});
+      }
+    });
+
+    // إشعار نظامي في المتصفح
+    if (chrome.notifications && chrome.notifications.create) {
+      try {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: '⚡ Premium Download Manager',
+          message: `تم اعتراض التنزيل وبدء التحميل في البرنامج: ${filename || 'ملف جديد'}`
+        }, () => {});
+      } catch (_e) {}
+    }
+  } else {
     // في حالة استثنائية إذا تعذر تسليم الرابط للبرنامج، نعيد التنزيل في المتصفح
     restoreBrowserDownload(url, filename);
   }
@@ -298,6 +332,32 @@ chrome.tabs.onRemoved.addListener(tabId => streamHits.delete(tabId));
 /* ===== (3) قنوات الرسائل والتواصل مع الـ Popup وسكربت المحتوى Content Script ===== */
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || typeof msg !== 'object') return;
+
+  // اعتراض النقر المباشر على روابط التنزيل داخل صفحات الويب (Content Script)
+  if (msg.type === 'interceptLinkClick') {
+    checkAppOpen().then(isOpen => {
+      if (!isOpen) {
+        sendResponse({ handled: false, open: false });
+        return;
+      }
+      const url = msg.url;
+      const filename = msg.filename;
+      sendToApp({
+        url,
+        filename,
+        referrer: msg.referrer || (sender.tab && sender.tab.url)
+      }).then(ok => {
+        if (ok) {
+          restoredDownloads.add(url);
+          setTimeout(() => restoredDownloads.delete(url), 10000);
+          sendResponse({ handled: true, filename });
+        } else {
+          sendResponse({ handled: false });
+        }
+      });
+    });
+    return true; // استجابة غير متزامنة
+  }
 
   // استعلام البثوث الملتقطة في التبويب الحالي
   if (msg.type === 'getHls') {

@@ -39,4 +39,18 @@ describe('التحقق من منطق اعتراض إضافة المتصفح وع
     expect(webReqMatches.length).toBe(1); // فقط مستمع واحد لـ STREAM_URL_RE
     expect(bgCode).toContain('STREAM_URL_RE.test');
   });
+
+  it('يحتوي background.js على تحديث شارة الأيقونة updateBadge وتنبيهات الالتقاط', () => {
+    expect(bgCode).toContain('updateBadge');
+    expect(bgCode).toContain('showCaptureToast');
+    expect(bgCode).toContain('chrome.notifications');
+  });
+
+  it('يحتوي content.js على معترض نقرات الروابط مع دعم تجاوز Alt وتوستر الالتقاط', () => {
+    const contentCode = fs.readFileSync(path.resolve(__dirname, '../../src/extension/content.js'), 'utf8');
+    expect(contentCode).toContain('initLinkInterceptor');
+    expect(contentCode).toContain('e.altKey');
+    expect(contentCode).toContain('interceptLinkClick');
+    expect(contentCode).toContain('showCaptureToast');
+  });
 });

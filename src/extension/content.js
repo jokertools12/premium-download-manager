@@ -365,3 +365,47 @@ function initVideoSniffer() {
   const observer = new MutationObserver(scan);
   observer.observe(document.body, { childList: true, subtree: true });
 }
+
+// رصد اعتراض ونقر روابط التنزيل داخل الصفحات (مع دعم مفتاح Alt لتجاوز البرنامج)
+const DL_EXT_RE = /\.(zip|rar|7z|tar|gz|bz2|xz|iso|exe|msi|apk|dmg|deb|rpm|mp4|mkv|webm|avi|mov|wmv|flv|m4v|mp3|m4a|aac|wav|flac|ogg|oga|pdf|epub|torrent|jar|msu|cab)($|[?#])/i;
+
+function initLinkInterceptor() {
+  document.addEventListener('click', e => {
+    // ضغط مفتاح Alt يتيح التحميل عبر المتصفح وتجاوز الإضافة (معيار IDM الشهير)
+    if (e.altKey) return;
+
+    const a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a || !a.href) return;
+
+    const href = a.href;
+    if (!/^https?:\/\//i.test(href)) return;
+
+    const hasDownloadAttr = a.hasAttribute('download');
+    const isDownloadLink = DL_EXT_RE.test(href.split('#')[0]);
+
+    if (!hasDownloadAttr && !isDownloadLink) return;
+
+    try {
+      chrome.runtime.sendMessage({
+        type: 'interceptLinkClick',
+        url: href,
+        filename: a.getAttribute('download') || href.split('?')[0].split('/').pop() || undefined,
+        referrer: window.location.href
+      }, res => {
+        if (res && res.handled) {
+          showPageToast(`⚡ تم توجيه التحميل إلى Premium DM: ${res.filename || ''}`);
+        }
+      });
+    } catch (_e) {}
+  }, true);
+
+  // استقبال رسائل إشعار الالتقاط من الخلفية
+  chrome.runtime.onMessage.addListener(msg => {
+    if (msg && msg.type === 'showCaptureToast') {
+      showPageToast(`⚡ تم اعتراض التنزيل والتحميل عبر Premium DM: ${msg.filename || ''}`);
+    }
+  });
+}
+
+initLinkInterceptor();
+

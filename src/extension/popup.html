@@ -421,53 +421,56 @@
     <div class="status-row">
       <div>
         <span class="status-dot" id="dotStatus"></span>
-        <span id="txtConnStatus" style="font-weight:600;">Checking...</span>
+        <span id="txtConnStatus" style="font-weight:600;">جاري فحص الاتصال...</span>
       </div>
       <div id="txtLiveSpeed" style="font-family:monospace; color:#4ade80; font-weight:700;">0 B/s</div>
     </div>
+    <div style="font-size: 11px; color: #94a3b8; background: rgba(15, 23, 42, 0.6); padding: 6px 8px; border-radius: 6px; border: 1px solid #1e293b; line-height: 1.4;">
+      ⚡ <b>التحميل عبر البرنامج فقط:</b> يتم اعتراض التنزيل وإلغاؤه فوراً من المتصفح لمنع التنزيل المزدوج طالما البرنامج مفتوح. اضغط <b>Alt</b> للتنزيل المباشر في المتصفح.
+    </div>
     <div class="quick-btns">
-      <button class="q-btn" id="btnResumeAll">▶ Resume All</button>
-      <button class="q-btn" id="btnPauseAll">⏸ Pause All</button>
+      <button class="q-btn" id="btnResumeAll">▶ استئناف الكل</button>
+      <button class="q-btn" id="btnPauseAll">⏸ إيقاف مؤقت</button>
     </div>
     <div class="quick-btns" style="margin-top: 6px;">
-      <button class="q-btn" id="btnLaunchApp">🚀 Launch App</button>
-      <button class="q-btn" id="btnToggleFloat">📌 Float Widget</button>
+      <button class="q-btn" id="btnLaunchApp">🚀 تشغيل / إظهار البرنامج</button>
+      <button class="q-btn" id="btnToggleFloat">📌 زر الفيديو العائم</button>
     </div>
   </div>
 
   <!-- Interception & Security Options -->
   <div class="sec">
-    <div class="sec-title">Interception & Security</div>
+    <div class="sec-title">إعدادات الاعتراض وحماية التنزيل</div>
     <div class="toggle-row">
       <label for="enabled">
-        <span>Auto-Intercept Downloads</span>
-        <small>Redirect download links to the app</small>
+        <span>الاعتراض التلقائي ومنع التنزيل المزدوج</span>
+        <small>تحويل التنزيلات للبرنامج المكتبي وإلغاء تنزيل المتصفح</small>
       </label>
       <label class="switch"><input type="checkbox" id="enabled" checked><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
       <label for="startupGuard">
-        <span>🛡️ Startup Guard</span>
-        <small>Block unwanted downloads on browser startup</small>
+        <span>🛡️ حارس بدء التشغيل (Startup Guard)</span>
+        <small>منع التنزيلات غير المرغوبة عند فتح المتصفح</small>
       </label>
       <label class="switch"><input type="checkbox" id="startupGuard" checked><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
       <label for="showVideoWidget">
-        <span>🎬 Floating Video Button</span>
-        <small>Show download button on video players</small>
+        <span>🎬 زر تحميل الفيديو العائم</span>
+        <small>إظهار زر التحميل الفوري على مشغلات الفيديو</small>
       </label>
       <label class="switch"><input type="checkbox" id="showVideoWidget" checked><span class="slider"></span></label>
     </div>
     <div class="row" style="margin-top:8px;">
-      <span style="font-size:12px; flex:1;">Minimum File Size:</span>
+      <span style="font-size:12px; flex:1;">الحد الأدنى لحجم الملف:</span>
       <input type="number" id="minSize" min="0" value="0">
-      <span style="font-size:11px; color:#64748b;">MB</span>
+      <span style="font-size:11px; color:#64748b;">ميجابايت (MB)</span>
     </div>
 
     <!-- Save Settings Button -->
     <button class="btn-save" id="btnSaveSettings">
-      <span>💾</span> Save Changes
+      <span>💾</span> حفظ التغييرات
     </button>
   </div>
 
