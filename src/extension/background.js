@@ -1,6 +1,6 @@
 'use strict';
 
-/* Premium DM Extension v7.2.2 — Professional Download Interception:
+/* Premium DM Extension v8.0.0 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
@@ -47,14 +47,10 @@ const EXCLUDED_EXT_RE = /\.(crx|xpi|pak|bin|dat|dll)$/i;
 let appConnected = false;
 let lastAppCheck = 0;
 
-function updateBadge(isOpen) {
+function updateBadge(_isOpen) {
   try {
-    if (isOpen) {
-      chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
-      chrome.action.setBadgeText({ text: 'ON' });
-    } else {
-      chrome.action.setBadgeText({ text: '' });
-    }
+    // إزالة شارة ON الخارجية تماماً وفق رغبة المستخدم وحصر المؤشر داخل واجهة الـ Popup فقط
+    chrome.action.setBadgeText({ text: '' });
   } catch (_e) {}
 }
 
@@ -78,7 +74,7 @@ async function checkAppOpen(forceFresh = false) {
   return appConnected;
 }
 
-// فحص دوري كل 3 ثوانٍ لمعرفة هل البرنامج مفتوح أم لا وتحديث الشارة
+// فحص دوري كل 3 ثوانٍ لمعرفة هل البرنامج مفتوح أم لا
 checkAppOpen(true);
 setInterval(() => { checkAppOpen(true); }, 3000);
 
@@ -92,12 +88,9 @@ function isIgnored(url) {
   } catch (_e) { return false; }
 }
 
-function badge(text, color = '#4f8cff') {
-  try {
-    chrome.action.setBadgeBackgroundColor({ color });
-    chrome.action.setBadgeText({ text });
-    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2500);
-  } catch (_e) {}
+function badge(_text, _color = '#4f8cff') {
+  // تم إلغاء الشارة الخارجية لتظل أيقونة المتصفح نظيفة دائماً
+  try { chrome.action.setBadgeText({ text: '' }); } catch (_e) {}
 }
 
 async function getCookiesForUrl(url) {
@@ -171,6 +164,9 @@ async function sendToApp(msg) {
   return ok;
 }
 
+/* قائمة الروابط التي تم تسليمها بنجاح للتطبيق لمنع التكرار نهائياً */
+const handledByAppUrls = new Set();
+
 /* إعادة التحميل في المتصفح بأمان عند تعذر الاتصال بالبرنامج */
 function restoreBrowserDownload(url, filename) {
   try {
@@ -183,12 +179,12 @@ function restoreBrowserDownload(url, filename) {
 }
 
 /* إلغاء التحميل ومسحه فوراً من شريط تنزيلات المتصفح لعدم التكرار */
-function cancelAndErase(downloadId, retries = 3) {
+function cancelAndErase(downloadId, retries = 5) {
   try {
     chrome.downloads.cancel(downloadId, () => {
       const err = chrome.runtime.lastError;
       if (err && retries > 0) {
-        setTimeout(() => cancelAndErase(downloadId, retries - 1), 60);
+        setTimeout(() => cancelAndErase(downloadId, retries - 1), 40);
         return;
       }
       try {
@@ -197,13 +193,14 @@ function cancelAndErase(downloadId, retries = 3) {
     });
   } catch (_e) {
     if (retries > 0) {
-      setTimeout(() => cancelAndErase(downloadId, retries - 1), 60);
+      setTimeout(() => cancelAndErase(downloadId, retries - 1), 40);
     }
   }
 }
 
 /* ===== قائمة كليك يمين ===== */
 chrome.runtime.onInstalled.addListener(() => {
+  try { chrome.action.setBadgeText({ text: '' }); } catch (_e) {}
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'pdm-download-link', title: '⚡ تحميل مع Premium DM', contexts: ['link'] });
     chrome.contextMenus.create({ id: 'pdm-download-media', title: '⚡ تحميل الوسائط مع Premium DM', contexts: ['video', 'audio'] });
@@ -221,7 +218,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   sendToApp({ url, referrer: tab && tab.url, force: true });
 });
 
-/* ===== (1) اعتراض التنزيلات الذكي (إلغاء تنزيل المتصفح وتحويله للبرنامج فقط طالما البرنامج مفتوح) ===== */
+/* ===== (1) اعتراض التنزيلات الصارم (إلغاء تنزيل المتصفح وتحويله للبرنامج فقط طالما البرنامج مفتوح) ===== */
 chrome.downloads.onCreated.addListener(async item => {
   if (!item || !item.url) return;
   if (!settings.enabled) return;
@@ -258,18 +255,27 @@ chrome.downloads.onCreated.addListener(async item => {
   // الحد الأدنى لحجم الملف إن وجد
   if (item.totalBytes > 0 && item.totalBytes < (settings.minSizeMB || 0) * 1024 * 1024) return;
 
-  // شرط المستخدم: التحميل من البرنامج فقط طالما البرنامج مفتوح
+  // شرط المستخدم الأساسي: التحميل من البرنامج فقط طالما البرنامج مفتوح
   const isOpen = await checkAppOpen();
   if (!isOpen) {
     // البرنامج مغلق: لا نعترض شيئاً، المتصفح يحمل الملف بشكل طبيعي تماماً
     return;
   }
 
-  // البرنامج مفتوح: نلغي التحميل في المتصفح فوراً ونمسحه حتى لا يتم التحميل مرتين
+  // إذا تم اعتراض الرابط مسبقاً عبر Content Script، نلغي ومسح تنزيل المتصفح فوراً
+  if (handledByAppUrls.has(url) || handledByAppUrls.has(item.url)) {
+    cancelAndErase(item.id);
+    return;
+  }
+
+  // البرنامج مفتوح: نلغي التحميل في المتصفح فوراً ونمسحه لمنع التنزيل المزدوج نهائياً
   cancelAndErase(item.id);
 
   // إرسال الرابط والمعلومات لمحرك التنزيل في البرنامج
   const filename = rawFilename || cleanUrl.split('/').pop() || undefined;
+  handledByAppUrls.add(url);
+  setTimeout(() => handledByAppUrls.delete(url), 30000);
+
   const sent = await sendToApp({
     url,
     filename,
@@ -287,20 +293,9 @@ chrome.downloads.onCreated.addListener(async item => {
         }).catch(() => {});
       }
     });
-
-    // إشعار نظامي في المتصفح
-    if (chrome.notifications && chrome.notifications.create) {
-      try {
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icons/icon128.png',
-          title: '⚡ Premium Download Manager',
-          message: `تم اعتراض التنزيل وبدء التحميل في البرنامج: ${filename || 'ملف جديد'}`
-        }, () => {});
-      } catch (_e) {}
-    }
   } else {
     // في حالة استثنائية إذا تعذر تسليم الرابط للبرنامج، نعيد التنزيل في المتصفح
+    handledByAppUrls.delete(url);
     restoreBrowserDownload(url, filename);
   }
 });
@@ -342,16 +337,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       const url = msg.url;
       const filename = msg.filename;
+      handledByAppUrls.add(url);
+      setTimeout(() => handledByAppUrls.delete(url), 30000);
+
       sendToApp({
         url,
         filename,
         referrer: msg.referrer || (sender.tab && sender.tab.url)
       }).then(ok => {
         if (ok) {
-          restoredDownloads.add(url);
-          setTimeout(() => restoredDownloads.delete(url), 10000);
           sendResponse({ handled: true, filename });
         } else {
+          handledByAppUrls.delete(url);
           sendResponse({ handled: false });
         }
       });

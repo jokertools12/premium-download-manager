@@ -246,7 +246,7 @@ if (HOST_MODE) {
     }
   } catch (_e) {}
 
-  function handleIncomingUrl(url) {
+  function handleIncomingUrl(url, extra = {}) {
     try {
       if (!/^https?:\/\//i.test(String(url || ''))) return false;
       if (video && video.isStreamUrl(url)) {
@@ -255,7 +255,14 @@ if (HOST_MODE) {
           (engine.settings.categoryDirs || {}).video || 'Videos'
         ));
       } else if (engine) {
-        engine.addTask({ url });
+        const autoStart = !!(engine.settings && engine.settings.autoStartFromBrowser);
+        if (autoStart) {
+          engine.addTask({ url, ...extra });
+        } else {
+          showWindow();
+          send({ type: 'openAddModalWithData', url, ...extra });
+          return true;
+        }
       } else {
         return false;
       }
@@ -497,6 +504,10 @@ if (HOST_MODE) {
       videoDir: () => path.join(engine.settings.downloadDir, (engine.settings.categoryDirs || {}).video || 'Videos'),
       onFocus: showWindow,
       onFloatToggle: toggleFloat,
+      onAddPrompt: (data) => {
+        showWindow();
+        send({ type: 'openAddModalWithData', ...data });
+      },
       mobileCompanion,
       qm
     });

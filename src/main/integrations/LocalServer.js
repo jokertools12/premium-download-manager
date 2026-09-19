@@ -5,13 +5,14 @@ const MediaStreamer = require('../engine/MediaStreamer');
 
 // خادم محلي متقدم يدعم إضافة المتصفح، تطبيق الموبايل، وواجهة REST API العامة (المراحل 10.1 و 12.2)
 class LocalServer {
-  constructor({ port, engine, video, videoDir, version, onFocus, mobileCompanion, qm, onFloatToggle } = {}) {
+  constructor({ port, engine, video, videoDir, version, onFocus, mobileCompanion, qm, onFloatToggle, onAddPrompt } = {}) {
     this.port = port;
     this.engine = engine;
     this.video = video || null;
     this.videoDir = videoDir || (() => (engine && engine.settings && engine.settings.downloadDir) || '');
     this.version = version || '';
     this.onFocus = onFocus || (() => {});
+    this.onAddPrompt = onAddPrompt || null;
     this.mobileCompanion = mobileCompanion || null;
     this.qm = qm || null;
     this.onFloatToggle = onFloatToggle || null;
@@ -103,14 +104,23 @@ class LocalServer {
                 if (msg.cookies) headers.cookie = msg.cookies;
                 if (msg.userAgent) headers['user-agent'] = msg.userAgent;
                 if (msg.headers && typeof msg.headers === 'object') Object.assign(headers, msg.headers);
+                const autoStart = !!(this.engine && this.engine.settings && this.engine.settings.autoStartFromBrowser);
                 if (this.video && (msg.video || this.video.isStreamUrl(url))) {
                   this.video.autoDownload(url, this.videoDir(), {
                     formatId: msg.formatId || undefined,
                     audioOnly: !!msg.audioOnly,
                     mergeOutput: msg.mergeOutput || 'mp4'
                   });
-                } else {
+                } else if (autoStart || !this.onAddPrompt) {
                   this.engine.addTask({ url, filename: msg.filename || undefined, headers });
+                } else {
+                  this.onAddPrompt({
+                    url,
+                    filename: msg.filename || undefined,
+                    referrer: msg.referrer || undefined,
+                    headers,
+                    size: msg.size || undefined
+                  });
                 }
                 ok = true;
                 this.onFocus();
@@ -249,7 +259,7 @@ class LocalServer {
         // مسار ping & status & summary للتكامل التام مع إضافة المتصفح
         if (pathname === '/ping') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '7.2.2' }));
+          res.end(JSON.stringify({ ok: true, running: true, app: 'PremiumDM', version: this.version || '8.0.0' }));
           return;
         }
 
@@ -265,7 +275,7 @@ class LocalServer {
             running: true,
             connected: true,
             app: 'PremiumDM',
-            version: this.version || '7.2.2',
+            version: this.version || '8.0.0',
             speed: totalSpeed,
             totalSpeed,
             active: activeCount,

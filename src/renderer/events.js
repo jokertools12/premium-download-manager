@@ -80,6 +80,14 @@ export function wireIpc() {
     } else if (data.type === 'extracted') {
       // فك الأرشيف التلقائي (2.3)
       toast(data.ok ? window.t('extract.done') : window.t('extract.failed'), data.ok ? 'ok' : 'err');
+    } else if (data.type === 'openAddModalWithData') {
+      openAdd(data.url || '', {
+        filename: data.filename,
+        referer: data.referrer,
+        headers: data.headers,
+        size: data.size
+      });
+      toast('⚡ تم استلام رابط جديد من المتصفح', 'ok');
     } else if (data.type === 'win') {
       $('#btnMax').textContent = data.maximized ? '❐' : '□';
     }

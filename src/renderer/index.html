@@ -48,7 +48,7 @@
       </div>
       <div class="sidebar-footer">
         <button id="btnSettings" class="side-settings" data-i18n="side.settings">⚙️ الإعدادات</button>
-        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v7.2.2</span></div>
+        <div class="sidebar-app-tag"><span>⚡ Premium DM</span><span class="v-tag">v8.0.0</span></div>
       </div>
     </aside>
 
@@ -203,6 +203,7 @@
       </label>
       <div class="modal-foot">
         <button class="btn ghost" data-close="addModal" data-i18n="add.cancel">إلغاء</button>
+        <button id="btnDownloadLater" class="btn secondary" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;">تحميل لاحقاً</button>
         <button id="btnStartDownload" class="btn primary" data-i18n="add.start">بدء التحميل</button>
       </div>
     </div>
@@ -526,6 +527,7 @@
         </label>
         <label class="chk"><input id="stClipboard" type="checkbox"> <span data-i18n="set.clipboard">مراقبة الحافظة واقتراح الروابط المنسوخة</span></label>
         <label class="chk"><input id="stAutoFloat" type="checkbox"> <span data-i18n="set.autoFloat">إظهار النافذة العائمة تلقائياً أثناء التحميل</span></label>
+        <label class="chk"><input id="stAutoStartFromBrowser" type="checkbox"> <span>بدء التنزيل فوراً عند الاستلام من المتصفح دون إظهار نافذة التأكيد</span></label>
         <label class="fld"><span data-i18n="set.maxSpeed">تحديد السرعة القصوى للتحميل (0 = بلا حدود)</span>
           <div class="row">
             <input id="stMaxSpeed" type="number" min="0" step="any" placeholder="0">

@@ -68,10 +68,12 @@ export async function inspectAddUrl(url) {
 }
 
 /* ===== إضافة رابط ===== */
-export async function openAdd(url) {
+export async function openAdd(url, extra = {}) {
   $('#addUrl').value = url || '';
-  $('#addName').value = '';
+  $('#addName').value = extra.filename || '';
   $('#addChecksum').value = '';
+  const refEl = $('#addReferer');
+  if (refEl) refEl.value = extra.referer || '';
   $('#addDir').value = (state.settings && state.settings.downloadDir) || '';
   const card = $('#addInspectCard');
   if (card) card.hidden = true;
@@ -112,6 +114,8 @@ export async function openSettings() {
   $('#stSched').checked = !!(s.scheduler && s.scheduler.enabled);
   $('#stStartAt').value = (s.scheduler && s.scheduler.startAt) || '';
   $('#stStopAt').value = (s.scheduler && s.scheduler.stopAt) || '';
+  const autoBrowser = $('#stAutoStartFromBrowser');
+  if (autoBrowser) autoBrowser.checked = !!s.autoStartFromBrowser;
   openModal('settingsModal');
   renderExtRows();
   // عرض نوع قاعدة البيانات المستخدمة
@@ -153,6 +157,7 @@ export async function openSettings() {
 export async function saveSettings() {
   const spd = parseFloat($('#stMaxSpeed').value) || 0;
   const maxSpeedKB = Math.max(0, Math.round($('#stSpeedUnit').value === 'mb' ? spd * 1024 : spd));
+  const autoBrowser = $('#stAutoStartFromBrowser');
   const patch = {
     downloadDir: $('#stDir').value.trim(),
     maxConcurrent: Math.max(1, Math.min(10, parseInt($('#stConcurrent').value, 10) || 3)),
@@ -162,6 +167,7 @@ export async function saveSettings() {
     clipboardMonitor: $('#stClipboard').checked,
     autoFloat: $('#stAutoFloat').checked,
     autoExtract: $('#stAutoExtract').checked,
+    autoStartFromBrowser: autoBrowser ? !!autoBrowser.checked : false,
     nameTemplate: $('#stNameTemplate').value.trim(),
     theme: $('#stTheme').value,
     accentColor: $('#stAccent').value,
@@ -347,7 +353,7 @@ export function wireModals() {
     const d = await window.pdm.invoke('chooseDir');
     if (d) $('#addDir').value = d;
   };
-  $('#btnStartDownload').onclick = async () => {
+  const handleAddSubmit = async (paused = false) => {
     const url = $('#addUrl').value.trim();
     if (!/^https?:\/\//i.test(url)) { toast(window.t('add.badUrl'), 'err'); return; }
     // روابط البث M3U8/MPD توجّه لنافذة الفيديو
@@ -363,7 +369,8 @@ export function wireModals() {
         dir: $('#addDir').value.trim() || undefined,
         referer: $('#addReferer').value.trim() || undefined,
         checksum: $('#addChecksum').value.trim() || undefined,
-        mirrors: $('#addMirrors').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+        mirrors: $('#addMirrors').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean),
+        paused
       };
 
       const r = await window.pdm.invoke('tasks:add', payload);
@@ -377,11 +384,17 @@ export function wireModals() {
       }
 
       closeModal('addModal');
-      toast(window.t('add.added'), 'ok');
+      toast(paused ? 'تمت إضافة التحميل في وضع الإيقاف المؤقت' : window.t('add.added'), 'ok');
     } catch (err) {
       toast(err.message || String(err), 'err');
     }
   };
+
+  $('#btnStartDownload').onclick = () => handleAddSubmit(false);
+  const btnDownloadLater = $('#btnDownloadLater');
+  if (btnDownloadLater) {
+    btnDownloadLater.onclick = () => handleAddSubmit(true);
+  }
   $('#addUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnStartDownload').click(); });
   $('#addUrl').addEventListener('input', e => {
     clearTimeout(inspectTimer);

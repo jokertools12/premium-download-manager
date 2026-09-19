@@ -4,8 +4,10 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs';
 
-describe('التحقق من منطق اعتراض إضافة المتصفح وعدم تكرار التنزيل (Extension Interception)', () => {
+describe('التحقق الشامل من منطق اعتراض الإضافة ومنع التنزيل المزدوج نهائياً (v8.0.0 Interception)', () => {
   const bgCode = fs.readFileSync(path.resolve(__dirname, '../../src/extension/background.js'), 'utf8');
+  const contentCode = fs.readFileSync(path.resolve(__dirname, '../../src/extension/content.js'), 'utf8');
+  const serverCode = fs.readFileSync(path.resolve(__dirname, '../../src/main/integrations/LocalServer.js'), 'utf8');
 
   it('يحتوي background.js على دالة فحص اتصال البرنامج المكتبي checkAppOpen', () => {
     expect(bgCode).toContain('async function checkAppOpen');
@@ -28,29 +30,29 @@ describe('التحقق من منطق اعتراض إضافة المتصفح وع
     expect(bgCode).toMatch(/crx|xpi|pak|bin|dat|dll/);
   });
 
-  it('يدير التنزيلات المستعادة restoredDownloads لمنع الحلقات اللانهائية', () => {
+  it('يدير قائمة handledByAppUrls و restoredDownloads لمنع التكرار بأمان', () => {
+    expect(bgCode).toContain('handledByAppUrls');
     expect(bgCode).toContain('restoredDownloads');
     expect(bgCode).toContain('restoreBrowserDownload');
   });
 
-  it('لا يستخدم webRequest.onBeforeRequest كمعترض للتنزيلات المباشرة (لمنع ازدواج التنزيل)', () => {
-    // webRequest.onBeforeRequest يجب أن يقتصر فقط على فحص وسائط البث HLS/M3U8
-    const webReqMatches = [...bgCode.matchAll(/chrome\.webRequest\.onBeforeRequest\.addListener/g)];
-    expect(webReqMatches.length).toBe(1); // فقط مستمع واحد لـ STREAM_URL_RE
-    expect(bgCode).toContain('STREAM_URL_RE.test');
+  it('يلغي شارة ON الخارجية من على أيقونة الإضافة لتظل نظيفة وفق رغبة المستخدم', () => {
+    expect(bgCode).toContain("chrome.action.setBadgeText({ text: '' })");
+    expect(bgCode).not.toContain("chrome.action.setBadgeText({ text: 'ON' })");
   });
 
-  it('يحتوي background.js على تحديث شارة الأيقونة updateBadge وتنبيهات الالتقاط', () => {
-    expect(bgCode).toContain('updateBadge');
-    expect(bgCode).toContain('showCaptureToast');
-    expect(bgCode).toContain('chrome.notifications');
-  });
-
-  it('يحتوي content.js على معترض نقرات الروابط مع دعم تجاوز Alt وتوستر الالتقاط', () => {
-    const contentCode = fs.readFileSync(path.resolve(__dirname, '../../src/extension/content.js'), 'utf8');
+  it('يحتوي content.js على منع التنزيل المزدوج e.preventDefault() ودعم تجاوز Alt وتوستر الإشعار', () => {
     expect(contentCode).toContain('initLinkInterceptor');
+    expect(contentCode).toContain('e.preventDefault()');
+    expect(contentCode).toContain('e.stopPropagation()');
     expect(contentCode).toContain('e.altKey');
-    expect(contentCode).toContain('interceptLinkClick');
-    expect(contentCode).toContain('showCaptureToast');
+    expect(contentCode).toContain('data-pdm-bypass');
+    expect(contentCode).toContain('showPageToast');
+  });
+
+  it('يدعم LocalServer خيار نافذة تأكيد التحميل onAddPrompt وخيار autoStartFromBrowser', () => {
+    expect(serverCode).toContain('onAddPrompt');
+    expect(serverCode).toContain('autoStartFromBrowser');
+    expect(serverCode).toContain('this.onFocus()');
   });
 });

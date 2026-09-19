@@ -371,11 +371,14 @@ const DL_EXT_RE = /\.(zip|rar|7z|tar|gz|bz2|xz|iso|exe|msi|apk|dmg|deb|rpm|mp4|m
 
 function initLinkInterceptor() {
   document.addEventListener('click', e => {
-    // ضغط مفتاح Alt يتيح التحميل عبر المتصفح وتجاوز الإضافة (معيار IDM الشهير)
+    // ضغط مفتاح Alt يتيح التحميل المباشر عبر المتصفح وتجاوز الإضافة (معيار IDM الشهير)
     if (e.altKey) return;
 
     const a = e.target && e.target.closest ? e.target.closest('a') : null;
     if (!a || !a.href) return;
+
+    // إذا كانت هذه النقرة ناتجة عن الاسترجاع التلقائي عند إغلاق البرنامج، لا نعترضها
+    if (a.getAttribute('data-pdm-bypass') === 'true') return;
 
     const href = a.href;
     if (!/^https?:\/\//i.test(href)) return;
@@ -385,18 +388,37 @@ function initLinkInterceptor() {
 
     if (!hasDownloadAttr && !isDownloadLink) return;
 
+    // إيقاف المتصفح فوراً عن بدء التنزيل المزدوج بالتوازي مع البرنامج
+    e.preventDefault();
+    e.stopPropagation();
+
+    const filename = a.getAttribute('download') || href.split('?')[0].split('/').pop() || undefined;
+
     try {
       chrome.runtime.sendMessage({
         type: 'interceptLinkClick',
         url: href,
-        filename: a.getAttribute('download') || href.split('?')[0].split('/').pop() || undefined,
+        filename,
         referrer: window.location.href
       }, res => {
         if (res && res.handled) {
-          showPageToast(`⚡ تم توجيه التحميل إلى Premium DM: ${res.filename || ''}`);
+          showPageToast(`⚡ تم توجيه التحميل إلى Premium DM: ${res.filename || filename || ''}`);
+        } else {
+          // البرنامج مغلق أو لم يستجب: السماح للمتصفح بالتحميل الطبيعي دون أي إعاقة
+          const fallback = document.createElement('a');
+          fallback.href = href;
+          if (a.hasAttribute('download')) fallback.setAttribute('download', a.getAttribute('download') || '');
+          if (a.target) fallback.target = a.target;
+          fallback.setAttribute('data-pdm-bypass', 'true');
+          document.body.appendChild(fallback);
+          fallback.click();
+          fallback.remove();
         }
       });
-    } catch (_e) {}
+    } catch (_e) {
+      // في حالة وجود خطأ في اتصال الـ runtime، نسمح بالتنزيل الطبيعي
+      window.location.href = href;
+    }
   }, true);
 
   // استقبال رسائل إشعار الالتقاط من الخلفية

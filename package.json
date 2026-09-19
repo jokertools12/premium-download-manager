@@ -1,6 +1,6 @@
 {
   "name": "premium-download-manager",
-  "version": "7.2.2",
+  "version": "8.0.0",
   "description": "Premium Download Manager - أسرع وأنيق مثل IDM وأكثر",
   "main": "src/main/main.js",
   "author": "PremiumDM",
