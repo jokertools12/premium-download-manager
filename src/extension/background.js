@@ -1,6 +1,6 @@
 'use strict';
 
-/* Premium DM Extension v8.0.1 — Professional Download Interception:
+/* Premium DM Extension v8.0.2 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
@@ -61,7 +61,7 @@ async function checkAppOpen(forceFresh = false) {
   }
   try {
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 600);
+    const timer = setTimeout(() => ctl.abort(), 1500);
     const res = await fetch('http://127.0.0.1:45762/ping', { method: 'GET', signal: ctl.signal });
     clearTimeout(timer);
     const data = await res.json().catch(() => null);
@@ -124,7 +124,11 @@ async function httpSend(endpoint, body = null, method = 'POST') {
 async function sendToApp(msg) {
   if (msg && msg.url) {
     if (!msg.cookies) {
-      msg.cookies = await getCookiesForUrl(msg.url);
+      try {
+        const cookiePromise = getCookiesForUrl(msg.url);
+        const timeoutPromise = new Promise(r => setTimeout(() => r(''), 150));
+        msg.cookies = await Promise.race([cookiePromise, timeoutPromise]);
+      } catch (_e) { msg.cookies = ''; }
     }
     if (!msg.userAgent && typeof navigator !== 'undefined') {
       msg.userAgent = navigator.userAgent;
@@ -255,23 +259,13 @@ chrome.downloads.onCreated.addListener(async item => {
   // الحد الأدنى لحجم الملف إن وجد
   if (item.totalBytes > 0 && item.totalBytes < (settings.minSizeMB || 0) * 1024 * 1024) return;
 
-  // شرط المستخدم الأساسي: التحميل من البرنامج فقط طالما البرنامج مفتوح
-  const isOpen = await checkAppOpen();
-  if (!isOpen) {
-    // البرنامج مغلق: لا نعترض شيئاً، المتصفح يحمل الملف بشكل طبيعي تماماً
-    return;
-  }
-
   // إذا تم اعتراض الرابط مسبقاً عبر Content Script، نلغي ومسح تنزيل المتصفح فوراً
   if (handledByAppUrls.has(url) || handledByAppUrls.has(item.url)) {
     cancelAndErase(item.id);
     return;
   }
 
-  // البرنامج مفتوح: نلغي التحميل في المتصفح فوراً ونمسحه لمنع التنزيل المزدوج نهائياً
-  cancelAndErase(item.id);
-
-  // إرسال الرابط والمعلومات لمحرك التنزيل في البرنامج
+  // إرسال الرابط والمعلومات لمحرك التنزيل في البرنامج فورياً
   const filename = rawFilename || cleanUrl.split('/').pop() || undefined;
   handledByAppUrls.add(url);
   setTimeout(() => handledByAppUrls.delete(url), 30000);
@@ -284,7 +278,8 @@ chrome.downloads.onCreated.addListener(async item => {
   });
 
   if (sent) {
-    // إشعار فوري داخل صفحة المتصفح الحالية
+    // البرنامج مفتوح واستلم الرابط بنجاح: نلغي ومسح التنزيل من المتصفح فوراً
+    cancelAndErase(item.id);
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs && tabs[0] && tabs[0].id) {
         chrome.tabs.sendMessage(tabs[0].id, {
@@ -294,9 +289,8 @@ chrome.downloads.onCreated.addListener(async item => {
       }
     });
   } else {
-    // في حالة استثنائية إذا تعذر تسليم الرابط للبرنامج، نعيد التنزيل في المتصفح
+    // البرنامج مغلق: لا نلغي تنزيل المتصفح وندعه يكمل التنزيل الطبيعي
     handledByAppUrls.delete(url);
-    restoreBrowserDownload(url, filename);
   }
 });
 
@@ -330,28 +324,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // اعتراض النقر المباشر على روابط التنزيل داخل صفحات الويب (Content Script)
   if (msg.type === 'interceptLinkClick') {
-    checkAppOpen().then(isOpen => {
-      if (!isOpen) {
-        sendResponse({ handled: false, open: false });
-        return;
-      }
-      const url = msg.url;
-      const filename = msg.filename;
-      handledByAppUrls.add(url);
-      setTimeout(() => handledByAppUrls.delete(url), 30000);
+    const url = msg.url;
+    const filename = msg.filename;
+    handledByAppUrls.add(url);
+    setTimeout(() => handledByAppUrls.delete(url), 30000);
 
-      sendToApp({
-        url,
-        filename,
-        referrer: msg.referrer || (sender.tab && sender.tab.url)
-      }).then(ok => {
-        if (ok) {
-          sendResponse({ handled: true, filename });
-        } else {
-          handledByAppUrls.delete(url);
-          sendResponse({ handled: false });
-        }
-      });
+    sendToApp({
+      url,
+      filename,
+      referrer: msg.referrer || (sender.tab && sender.tab.url)
+    }).then(ok => {
+      if (ok) {
+        sendResponse({ handled: true, filename });
+      } else {
+        handledByAppUrls.delete(url);
+        sendResponse({ handled: false });
+      }
+    }).catch(() => {
+      handledByAppUrls.delete(url);
+      sendResponse({ handled: false });
     });
     return true; // استجابة غير متزامنة
   }

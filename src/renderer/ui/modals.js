@@ -72,13 +72,60 @@ export async function inspectAddUrl(url) {
 export async function openAdd(url, extra = {}) {
   currentAddExtra = extra || {};
   $('#addUrl').value = url || '';
-  $('#addName').value = extra.filename || '';
+
+  // استخراج الاسم المبدئي فوراً من extra أو نهاية الرابط (0ms دون انتظار الشبكة)
+  let initialName = extra.filename || '';
+  if (!initialName && url) {
+    try {
+      const u = new URL(url);
+      const segs = u.pathname.split('/').filter(Boolean);
+      if (segs.length) initialName = decodeURIComponent(segs[segs.length - 1]);
+    } catch (_e) {}
+  }
+  $('#addName').value = initialName;
   $('#addChecksum').value = '';
   const refEl = $('#addReferer');
   if (refEl) refEl.value = extra.referer || '';
-  $('#addDir').value = (state.settings && state.settings.downloadDir) || '';
+
+  // تصنيف فوري للملف والمجلد المستهدف
+  const s = state.settings || {};
+  let targetDir = s.downloadDir || '';
+  let categoryName = 'عام';
+  let categoryKey = 'other';
+  if (initialName) {
+    const ext = (initialName.split('.').pop() || '').toLowerCase();
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'].includes(ext)) { categoryName = 'أرشيف'; categoryKey = 'compressed'; }
+    else if (['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv'].includes(ext)) { categoryName = 'فيديو'; categoryKey = 'video'; }
+    else if (['mp3', 'flac', 'wav', 'aac', 'ogg', 'm4a'].includes(ext)) { categoryName = 'صوتيات'; categoryKey = 'audio'; }
+    else if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'].includes(ext)) { categoryName = 'مستندات'; categoryKey = 'document'; }
+    else if (['exe', 'msi', 'apk', 'dmg', 'deb'].includes(ext)) { categoryName = 'برامج'; categoryKey = 'program'; }
+    else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) { categoryName = 'صور'; categoryKey = 'image'; }
+  }
+  if (s.organizeByCategory && targetDir && s.categoryDirs && s.categoryDirs[categoryKey]) {
+    const sep = (window.pdm && window.pdm.platform === 'win32') ? '\\' : '/';
+    targetDir = String(targetDir).replace(/[\\/]+$/, '') + sep + s.categoryDirs[categoryKey];
+  }
+  $('#addDir').value = targetDir;
+
+  const chkDirect = $('#chkAlwaysDirectDownload');
+  if (chkDirect) chkDirect.checked = !!s.autoStartFromBrowser;
+
+  // إظهار وتعبئة بطاقة الفحص فوراً بالمعلومات المتاحة محلياً
   const card = $('#addInspectCard');
-  if (card) card.hidden = true;
+  if (card && url) {
+    card.hidden = false;
+    const catBadge = $('#inspCategory');
+    if (catBadge) catBadge.textContent = '📦 ' + categoryName;
+    const sizeBadge = $('#inspSize');
+    if (sizeBadge) sizeBadge.textContent = extra.size ? fmtBytes(extra.size) : 'فحص الحجم...';
+    const fnVal = $('#inspFilename');
+    if (fnVal) fnVal.textContent = initialName || '—';
+    const spinner = $('#inspSpinner');
+    if (spinner) spinner.hidden = false;
+  } else if (card) {
+    card.hidden = true;
+  }
+
   openModal('addModal');
   if (url) {
     inspectAddUrl(url);
@@ -86,6 +133,7 @@ export async function openAdd(url, extra = {}) {
     $('#addUrl').focus();
   }
 }
+
 
 /* ===== الإعدادات ===== */
 export async function openSettings() {
@@ -390,6 +438,20 @@ export function wireModals() {
           await window.pdm.tasks.add(forcePayload);
         } else {
           await window.pdm.invoke('tasks:add', forcePayload);
+        }
+      }
+
+      // حفظ تفضيل التحميل المباشر إذا قام المستخدم بتحديده
+      const chkDirect = $('#chkAlwaysDirectDownload');
+      if (chkDirect) {
+        const isDirect = !!chkDirect.checked;
+        if (state.settings && state.settings.autoStartFromBrowser !== isDirect) {
+          try {
+            await window.pdm.invoke('updateSettings', { autoStartFromBrowser: isDirect });
+            state.settings.autoStartFromBrowser = isDirect;
+            const stAuto = $('#stAutoStartFromBrowser');
+            if (stAuto) stAuto.checked = isDirect;
+          } catch (_e) {}
         }
       }
 

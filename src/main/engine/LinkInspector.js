@@ -113,7 +113,7 @@ class LinkInspector {
   /**
    * فحص عميق للرابط قبل البدء: استخراج الاسم الحقيقي، الحجم، الاستئناف، والتصنيف الذكي
    */
-  async inspect(url, { headers = {}, timeout = 12000 } = {}) {
+  async inspect(url, { headers = {}, timeout = 2500 } = {}) {
     const targetUrl = String(url || '').trim();
     if (!/^https?:\/\//i.test(targetUrl)) {
       throw new Error('رابط غير صالح');

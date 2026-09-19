@@ -41,6 +41,7 @@ const DEFAULT_SETTINGS = {
   language: 'ar',
   scheduler: { enabled: false, startAt: '', stopAt: '', bandwidthRules: [] },
   telemetryOptIn: null, // null = لم يُسأل بعد، true = موافق، false = رافض
+  autoStartFromBrowser: false,
   categoryDirs: {
     video: 'Videos',
     audio: 'Music',

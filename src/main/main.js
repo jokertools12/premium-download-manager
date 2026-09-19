@@ -64,11 +64,16 @@ function send(data) {
 }
 
 function showWindow() {
-  if (!win) return;
+  if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
   win.show();
+  win.setAlwaysOnTop(true);
+  try { app.focus({ steal: true }); } catch (_e) {}
   win.focus();
+  win.setAlwaysOnTop(false);
+  win.moveTop();
 }
+
 
 /* ===== القطعة العائمة لسطح المكتب 2.0 (Desktop Floating Mini-Drop Widget) ===== */
 function getFloatDimensions(mode) {

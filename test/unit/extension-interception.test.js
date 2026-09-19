@@ -20,9 +20,10 @@ describe('التحقق الشامل من منطق اعتراض الإضافة و
     expect(bgCode).toContain('chrome.downloads.erase');
   });
 
-  it('يتحقق من شرط فتح البرنامج isOpen قبل إلغاء تنزيل المتصفح', () => {
-    expect(bgCode).toContain('const isOpen = await checkAppOpen()');
-    expect(bgCode).toContain('if (!isOpen)');
+  it('يتحقق من نجاح تسليم الرابط للبرنامج (sent) قبل إلغاء ومسح تنزيل المتصفح لمنع فقدان التنزيل عند إغلاق البرنامج', () => {
+    expect(bgCode).toContain('const sent = await sendToApp');
+    expect(bgCode).toContain('if (sent)');
+    expect(bgCode).toContain('cancelAndErase(item.id)');
   });
 
   it('يستبعد امتدادات التحديث وملفات النظام وحزم الإضافات EXCLUDED_EXT_RE', () => {
