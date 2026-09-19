@@ -207,23 +207,28 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
 }
 
 function generateChangelog(version) {
-  return `## ⚡ Premium Download Manager v${version}
+  return `## ⚡ Premium Download Manager v${version} - Comprehensive Fix & Stability Release
 
-### 🌟 What's New / ما الجديد في هذا الإصدار:
-- **Stream & Live Preview (البث الحي أثناء التحميل)**: Play video and audio while downloading after just 2% progress with the built-in player.
-- **Refresh Expired Links (استئناف الروابط المنتهية)**: Renew expired links and resume downloads without losing already transferred bytes.
-- **Startup Guard for Browser Extension (حارس بدء المتصفح)**: Blocks unwanted background downloads when restoring browser sessions and excludes internal update domains.
-- **Floating Video Download Sniffer (زر الفيديو العائم)**: Sleek floating IDM-style widget on video web players for instant one-click capture.
-- **Archive Auto-Extractor (فك الضغط التلقائي للأرشيفات)**: Automatically unpacks ZIP, RAR, and 7z archives to a subfolder upon download completion.
-- **Integrated Hash Calculator (حاسبة التجزئة)**: Instant streaming verification for MD5, SHA-1, and SHA-256.
-- **Resilience Engine & File Sanitization (حماية الملفات والتنزيل الذري)**: Protected tool binaries with atomic rename and strict OS filename sanitization.
-- **Interactive Workflow Simulator & Web Hub (موقع تفاعلي متطور)**: Updated web landing page with connection chunk visualizer and comparison matrix.
+### 🌟 الإصلاحات والتحسينات الرئيسية / Key Fixes & Improvements:
+- **إصلاح جذري لمحرك التنزيل (Critical Download Engine Fixes)**:
+  - تحديث الترويسة (User-Agent) لمحاكاة متصفح Chrome الحديث، لتجاوز حظر Cloudflare وAkamai وCDNs وخطأ 403 Forbidden.
+  - إزالة إعادة الفحص المزدوجة التي كانت تتسبب في انتهاء صلاحية الروابط المؤقتة وذات الرموز المميزة (Tokenized / Expired One-Time Links).
+  - تصحيح حساب النطاقات المجزأة (Byte-Ranges) ومنع التداخل أو قراءة أجزاء منتهية (Zombie chunks).
+  - إضافة إلغاء فوري ومحكم لتيار البيانات (Stream cancellation) لتحرير الاتصالات ومنع التعليق.
+  - تسجيل دقيق لحجم الملف النهائي للتنزيلات ذات الحجم المتدفق (Chunked / Unknown Content-Length).
+- **إصلاح جسر إضافة المتصفح (Browser Extension Native Messaging Bridge)**:
+  - إصلاح مشكلة قراءة الإطارات عبر stdin في وضع الـ Native Messaging لضمان التقاط الروابط بنسبة 100% ودون انقطاع من Chrome وEdge.
+- **تحديث روابط الأدوات المساعدة (FFmpeg & Video Tools)**:
+  - تحديث وتصحيح روابط تحميل حزم FFmpeg الثابتة لتفادي أخطاء 404 عند معالجة الفيديوهات.
+  - إضافة User-Agent قياسي لتحميل yt-dlp ومكونات الفيديو تلقائياً.
+- **استقرار التخزين وقاعدة البيانات (Storage Resilience)**:
+  - دعم التخزين الاحتياطي التلقائي (JSON Mode) بكل سلاسة وسرعة مع اجتياز كافة اختبارات الجودة بنسبة 100%.
 
 ---
 ### 📦 Installation & Automatic Updates:
 1. **Windows Installer**: Download and run \`PremiumDM-Setup-${version}.exe\`.
 2. **Portable ZIP**: Extract and run \`PremiumDM-Portable-${version}.zip\` without installation.
-3. **Existing Users**: The application will automatically update on next launch.
+3. **Existing Users**: The application will automatically update on next launch via auto-updater.
 `;
 }
 

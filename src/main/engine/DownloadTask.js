@@ -7,7 +7,7 @@ const path = require('path');
 const { normalizeChecksum, verifyFile } = require('./checksum');
 const { expandTemplate, uniquifyPath, sanitize } = require('./naming');
 
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 PremiumDM/1.0';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 const MIN_SEGMENT = 1024 * 1024; // أقل حجم لجزء واحد (1MB)
 const MAX_RETRIES = 5;
 
@@ -135,6 +135,7 @@ class DownloadTask extends EventEmitter {
       this._startTimer();
       await this._runAll();
       if (this.size && this.received < this.size) throw new Error('الملف غير مكتمل');
+      if (!this.size) this.size = this.received;
       await this._verifyIntegrity();
       this.status = 'completed';
       this.completedAt = Date.now();
@@ -213,12 +214,15 @@ class DownloadTask extends EventEmitter {
     if (this.fd) return;
     await fsp.mkdir(this.dir, { recursive: true });
     if (!fs.existsSync(this.filePath)) {
-      if (this.segments.length) {
-        this.segments = [];
+      if (this.received > 0) {
         this.received = 0;
-        await this._initialize();
+        for (const s of this.segments) {
+          s.received = 0;
+          s.done = false;
+        }
       }
       this.fd = await fsp.open(this.filePath, 'w');
+      this._fileReady = false;
     } else {
       this.fd = await fsp.open(this.filePath, 'r+');
     }
@@ -262,9 +266,15 @@ class DownloadTask extends EventEmitter {
   async _probeUrl(url) {
     let res = null;
     let usedRange = true;
+    const probeHeaders = {
+      'user-agent': UA,
+      'accept': '*/*',
+      'accept-language': 'en-US,en;q=0.9,ar;q=0.8',
+      ...this.headers
+    };
     try {
       res = await fetch(url, {
-        headers: { 'user-agent': UA, ...this.headers, range: 'bytes=0-0' },
+        headers: { ...probeHeaders, range: 'bytes=0-0' },
         redirect: 'follow'
       });
     } catch (_e) {
@@ -278,7 +288,7 @@ class DownloadTask extends EventEmitter {
       usedRange = false;
       try {
         res = await fetch(url, {
-          headers: { 'user-agent': UA, ...this.headers },
+          headers: probeHeaders,
           redirect: 'follow'
         });
       } catch (err) {
@@ -469,9 +479,10 @@ class DownloadTask extends EventEmitter {
     const controller = new AbortController();
     this._controllers.add(controller);
     try {
-      const headers = { 'user-agent': UA, ...this.headers };
+      const headers = { 'user-agent': UA, accept: '*/*', ...this.headers };
       const useRange = this.supportsRanges && this.size && seg.end !== null;
       if (useRange) {
+        if (seg.start + seg.received > seg.end) { seg.done = true; return; }
         headers.range = `bytes=${seg.start + seg.received}-${seg.end}`;
       } else if (seg.received) {
         this.received -= seg.received;
@@ -532,6 +543,12 @@ class DownloadTask extends EventEmitter {
             if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
             data = data.subarray(skipBytes);
             skipBytes = 0;
+          }
+          if (segLen !== Infinity && written + memBytes >= segLen) {
+            if (res.body && res.body.cancel) {
+              try { await res.body.cancel(); } catch (_e) {}
+            }
+            break;
           }
           if (segLen !== Infinity && written + memBytes + data.length > segLen) {
             const allowed = Math.max(0, segLen - (written + memBytes));
@@ -720,6 +737,7 @@ class DownloadTask extends EventEmitter {
       this._startTimer();
       await this._runAll();
       if (this.size && this.received < this.size) throw new Error('الملف غير مكتمل');
+      if (!this.size) this.size = this.received;
       await this._verifyIntegrity();
       this.status = 'completed';
       this.completedAt = Date.now();

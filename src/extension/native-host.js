@@ -46,31 +46,38 @@ function ping() {
 }
 
 function readMessage(cb) {
-  const lenBuf = Buffer.alloc(4);
-  let read = 0;
-  const onLen = () => {
-    if (read < 4) return;
-    process.stdin.removeListener('readable', onLen);
-    const len = lenBuf.readUInt32LE(0);
-    if (len === 0 || len > 1024 * 1024) return cb(null);
-    const msgBuf = Buffer.alloc(len);
-    let got = 0;
-    const onMsg = () => {
-      const data = process.stdin.read();
-      if (!data) return;
-      data.copy(msgBuf, got);
-      got += data.length;
-      if (got >= len) {
-        process.stdin.removeListener('readable', onMsg);
-        try { cb(JSON.parse(msgBuf.toString('utf8'))); }
-        catch (_e) { cb(null); }
+  const chunks = [];
+  let total = 0;
+  let expectedLen = null;
+
+  const onReadable = () => {
+    let chunk;
+    while ((chunk = process.stdin.read()) !== null) {
+      chunks.push(chunk);
+      total += chunk.length;
+      if (expectedLen === null && total >= 4) {
+        const header = Buffer.concat(chunks);
+        expectedLen = header.readUInt32LE(0);
+        if (expectedLen === 0 || expectedLen > 10 * 1024 * 1024) {
+          process.stdin.removeListener('readable', onReadable);
+          return cb(null);
+        }
       }
-    };
-    process.stdin.on('readable', onMsg);
-    onMsg();
+      if (expectedLen !== null && total >= 4 + expectedLen) {
+        process.stdin.removeListener('readable', onReadable);
+        const all = Buffer.concat(chunks);
+        const body = all.subarray(4, 4 + expectedLen);
+        try {
+          cb(JSON.parse(body.toString('utf8')));
+        } catch (_e) {
+          cb(null);
+        }
+        return;
+      }
+    }
   };
-  process.stdin.on('readable', onLen);
-  onLen();
+  process.stdin.on('readable', onReadable);
+  onReadable();
 }
 
 readMessage(async msg => {

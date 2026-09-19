@@ -22,9 +22,9 @@ describe('platforms.js — المنصات الثلاث (6.1)', () => {
     const b1 = binaries('darwin', 'arm64');
     expect(b1.ytDlp.file).toBe('yt-dlp');
     expect(b1.ytDlp.url).toMatch(/yt-dlp_macos$/);
-    expect(b1.ffmpeg.url).toContain('ffmpeg-macos-arm64');
+    expect(b1.ffmpeg.url).toMatch(/ffmpeg-(darwin|macos)-arm64/);
     const b2 = binaries('darwin', 'x64');
-    expect(b2.ffmpeg.url).toContain('ffmpeg-macos-x64');
+    expect(b2.ffmpeg.url).toMatch(/ffmpeg-(darwin|macos)-x64/);
     expect(needsChmod('darwin')).toBe(true);
   });
 

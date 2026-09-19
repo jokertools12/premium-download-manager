@@ -7,12 +7,14 @@ const path = require('path');
 
 const YT_DLP_BASE = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/';
 
-/* ثنائيات ffmpeg-static: ملف واحد بلا أرشيف لكل منصة (يبسط التثبيت) */
+/* ثنائيات ffmpeg-static: ملف واحد مباشر بلا أرشيف لكل منصة (يبسط التثبيت) */
 function ffmpegAsset(platform, arch) {
-  if (platform === 'win32') return 'ffmpeg-win32-x64.exe';
-  if (platform === 'darwin') return arch === 'arm64' ? 'ffmpeg-macos-arm64' : 'ffmpeg-macos-x64';
+  if (platform === 'win32') return 'ffmpeg-win32-x64';
+  if (platform === 'darwin') return arch === 'arm64' ? 'ffmpeg-darwin-arm64' : 'ffmpeg-darwin-x64';
   return arch === 'arm64' ? 'ffmpeg-linux-arm64' : 'ffmpeg-linux-x64';
 }
+
+const FFMPEG_STATIC_BASE = 'https://github.com/eugeneware/ffmpeg-static/releases/download/b6.0/';
 
 /* معلومات الأدوات المطلوبة لمنصة معينة */
 function binaries(platform = process.platform, arch = process.arch) {
@@ -20,7 +22,7 @@ function binaries(platform = process.platform, arch = process.arch) {
     return {
       ytDlp: { url: YT_DLP_BASE + 'yt-dlp.exe', file: 'yt-dlp.exe' },
       ffmpeg: {
-        url: 'https://github.com/eugeneware/ffmpeg-static/releases/latest/download/ffmpeg-win32-x64.exe',
+        url: FFMPEG_STATIC_BASE + 'ffmpeg-win32-x64',
         file: 'ffmpeg.exe'
       }
     };
@@ -29,7 +31,7 @@ function binaries(platform = process.platform, arch = process.arch) {
     return {
       ytDlp: { url: YT_DLP_BASE + 'yt-dlp_macos', file: 'yt-dlp' },
       ffmpeg: {
-        url: 'https://github.com/eugeneware/ffmpeg-static/releases/latest/download/' + ffmpegAsset('darwin', arch),
+        url: FFMPEG_STATIC_BASE + ffmpegAsset('darwin', arch),
         file: 'ffmpeg'
       }
     };
@@ -37,7 +39,7 @@ function binaries(platform = process.platform, arch = process.arch) {
   return {
     ytDlp: { url: YT_DLP_BASE + 'yt-dlp_linux', file: 'yt-dlp' },
     ffmpeg: {
-      url: 'https://github.com/eugeneware/ffmpeg-static/releases/latest/download/' + ffmpegAsset('linux', arch),
+      url: FFMPEG_STATIC_BASE + ffmpegAsset('linux', arch),
       file: 'ffmpeg'
     }
   };
