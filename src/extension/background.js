@@ -1,14 +1,15 @@
 'use strict';
 
-/* Premium DM Extension v7.2.0 — Professional Download Interception:
+/* Premium DM Extension v7.2.1 — Professional Download Interception:
    1) Startup Guard: Block unwanted auto-downloads on browser launch.
    2) Exclude internal browser extensions (pak, bin, dat, dll).
    3) Exclude official update domains for Chrome, Edge, and Firefox.
-   4) webRequest: Smart interception for direct download links.
-   5) Sniffer & Floating Widget: Capture video/HLS/M3U8 streams.
-   6) Right-click: Context menu quick options.
-   7) Cookie & Session Forwarding: Authenticated downloads support.
-   8) Daily Stats: Track download count and size per day. */
+   4) Smart Interception: Intercept downloads only when desktop app is open.
+   5) Cancel & Erase browser download so files are never downloaded twice.
+   6) Sniffer & Floating Widget: Capture video/HLS/M3U8 streams.
+   7) Right-click: Context menu quick options.
+   8) Cookie & Session Forwarding: Authenticated downloads support.
+   9) Daily Stats: Track download count and size per day. */
 
 const HOST = 'com.premiumdm.host';
 const EXT_BOOT_TIME = Date.now();
@@ -23,8 +24,8 @@ const DEFAULTS = {
 
 let settings = { ...DEFAULTS };
 
-/* عناوين نعالجها حالياً لتفادي حلقات إعادة التحميل */
-const handling = new Map(); // url -> expiry timestamp
+/* عناوين تم استعادتها لتنزيلها في المتصفح بأمان */
+const restoredDownloads = new Set();
 
 chrome.storage.sync.get(DEFAULTS, s => { settings = { ...DEFAULTS, ...s }; });
 chrome.storage.onChanged.addListener(ch => {
@@ -39,10 +40,36 @@ const INTERNAL_DOMAINS = [
   'edge.activity.windows.com', 'edge.microsoft.com', 'brave.com'
 ];
 
-/* قائمة الامتدادات الحقيقية للتنزيل (استبعاد pak, bin, dat, dll نهائياً) */
-const DOWNLOAD_EXT_RE = /\.(zip|rar|7z|tar|gz|bz2|xz|iso|exe|msi|apk|dmg|deb|rpm|mp4|mkv|webm|avi|mov|wmv|flv|m4v|mp3|m4a|aac|wav|flac|ogg|oga|pdf|epub|torrent|jar|msu|cab)$/i;
+/* امتدادات ملفات التحديث وحزم الإضافات المستبعدة نهائياً من الاعتراض */
+const EXCLUDED_EXT_RE = /\.(crx|xpi|pak|bin|dat|dll)$/i;
 
-/* ===== أدوات مساعدة ===== */
+/* ===== أدوات مساعدة وفحص حالة تشغيل البرنامج المكتبي ===== */
+let appConnected = false;
+let lastAppCheck = 0;
+
+async function checkAppOpen(forceFresh = false) {
+  const now = Date.now();
+  if (!forceFresh && (now - lastAppCheck) < 2000) {
+    return appConnected;
+  }
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 600);
+    const res = await fetch('http://127.0.0.1:45762/ping', { method: 'GET', signal: ctl.signal });
+    clearTimeout(timer);
+    const data = await res.json().catch(() => null);
+    appConnected = !!(data && data.ok);
+  } catch (_e) {
+    appConnected = false;
+  }
+  lastAppCheck = now;
+  return appConnected;
+}
+
+// فحص دوري كل 3 ثوانٍ لمعرفة هل البرنامج مفتوح أم لا
+checkAppOpen(true);
+setInterval(() => { checkAppOpen(true); }, 3000);
+
 function isIgnored(url) {
   try {
     const host = new URL(url).hostname.toLowerCase();
@@ -107,12 +134,14 @@ async function sendToApp(msg) {
 
   if (!ok) {
     try {
-      await chrome.runtime.sendNativeMessage(HOST, msg);
-      ok = true;
+      const res = await chrome.runtime.sendNativeMessage(HOST, msg);
+      ok = !!(res && (res.ok || res.launched));
     } catch (_e) { ok = false; }
   }
 
   if (ok) {
+    appConnected = true;
+    lastAppCheck = Date.now();
     badge('✓');
     // Track daily stats
     const today = new Date().toISOString().slice(0, 10);
@@ -133,14 +162,33 @@ async function sendToApp(msg) {
 /* إعادة التحميل في المتصفح بأمان عند تعذر الاتصال بالبرنامج */
 function restoreBrowserDownload(url, filename) {
   try {
+    restoredDownloads.add(url);
+    setTimeout(() => restoredDownloads.delete(url), 30000);
     const dl = { url, conflictAction: 'uniquify' };
     if (filename) dl.filename = filename;
     chrome.downloads.download(dl, () => {});
   } catch (_e) {}
 }
 
-function markHandling(url) { handling.set(url, Date.now() + 15000); }
-function isHandling(url) { return handling.has(url) && handling.get(url) > Date.now(); }
+/* إلغاء التحميل ومسحه فوراً من شريط تنزيلات المتصفح لعدم التكرار */
+function cancelAndErase(downloadId, retries = 3) {
+  try {
+    chrome.downloads.cancel(downloadId, () => {
+      const err = chrome.runtime.lastError;
+      if (err && retries > 0) {
+        setTimeout(() => cancelAndErase(downloadId, retries - 1), 60);
+        return;
+      }
+      try {
+        chrome.downloads.erase({ id: downloadId }, () => {});
+      } catch (_e) {}
+    });
+  } catch (_e) {
+    if (retries > 0) {
+      setTimeout(() => cancelAndErase(downloadId, retries - 1), 60);
+    }
+  }
+}
 
 /* ===== قائمة كليك يمين ===== */
 chrome.runtime.onInstalled.addListener(() => {
@@ -158,37 +206,70 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     sendToApp({ url, referrer: tab && tab.url, force: true, video: true });
     return;
   }
-  markHandling(url);
   sendToApp({ url, referrer: tab && tab.url, force: true });
 });
 
-/* ===== (1) منع التحميل قبل أن يبدأ في المتصفح (webRequest Blocking) ===== */
-chrome.webRequest.onBeforeRequest.addListener(details => {
-  if (!settings.enabled) return {};
-  const url = details.url;
-  if (!/^https?:\/\//i.test(url)) return {};
-  if (isIgnored(url)) return {};
-  if (isHandling(url)) return {};
+/* ===== (1) اعتراض التنزيلات الذكي (إلغاء تنزيل المتصفح وتحويله للبرنامج فقط طالما البرنامج مفتوح) ===== */
+chrome.downloads.onCreated.addListener(async item => {
+  if (!item || !item.url) return;
+  if (!settings.enabled) return;
 
-  // حارس بدء التشغيل: منع اعتراض استعادة التبويبات عند فتح المتصفح
-  if (settings.startupGuard && (Date.now() - EXT_BOOT_TIME) < 8000) {
-    if (details.type === 'main_frame') return {};
+  const url = item.finalUrl || item.url;
+
+  // إذا تم استعادة هذا الرابط مسبقاً للتنزيل في المتصفح، دعه يكمل بدون اعتراض
+  if (restoredDownloads.has(url) || restoredDownloads.has(item.url)) {
+    restoredDownloads.delete(url);
+    restoredDownloads.delete(item.url);
+    return;
   }
 
-  // تجنب كسر تصفح المواقع: لا نمنع إلا الطلبات المباشرة
-  if (details.type !== 'main_frame' && details.type !== 'other') return {};
-  if (!DOWNLOAD_EXT_RE.test(url.split('?')[0])) return {};
+  // حارس بدء التشغيل: حل مشكلة التحميلات التلقائية عند فتح المتصفح (Startup Guard)
+  if (settings.startupGuard) {
+    const elapsed = Date.now() - EXT_BOOT_TIME;
+    if (elapsed < 8000) {
+      if (item.startTime && new Date(item.startTime).getTime() < EXT_BOOT_TIME) return;
+      if (item.state && item.state !== 'in_progress') return;
+    }
+  }
 
-  markHandling(url);
-  const referrer = details.initiator || details.documentUrl || '';
-  const filename = (url.split('/').pop() || '').split('?')[0] || undefined;
+  // استبعاد الروابط الداخلية للمتصفح
+  if (/^(blob:|data:|about:|chrome:|edge:|chrome-extension:)/i.test(item.url)) return;
+  if (!/^https?:\/\//i.test(url)) return;
+  if (isIgnored(url)) return;
 
-  sendToApp({ url, referrer, force: true, filename }).then(ok => {
-    if (!ok) restoreBrowserDownload(url, filename);
-  }).catch(() => restoreBrowserDownload(url, filename));
+  const rawFilename = (item.filename || '').split(/[\\/]/).pop() || '';
+  const cleanUrl = url.split('?')[0];
 
-  return {};
-}, { urls: ['<all_urls>'] }, []);
+  // استبعاد ملفات المتصفح الداخلية وحزم الإضافات
+  if (EXCLUDED_EXT_RE.test(cleanUrl) || EXCLUDED_EXT_RE.test(rawFilename)) return;
+
+  // الحد الأدنى لحجم الملف إن وجد
+  if (item.totalBytes > 0 && item.totalBytes < (settings.minSizeMB || 0) * 1024 * 1024) return;
+
+  // شرط المستخدم: التحميل من البرنامج فقط طالما البرنامج مفتوح
+  const isOpen = await checkAppOpen();
+  if (!isOpen) {
+    // البرنامج مغلق: لا نعترض شيئاً، المتصفح يحمل الملف بشكل طبيعي تماماً
+    return;
+  }
+
+  // البرنامج مفتوح: نلغي التحميل في المتصفح فوراً ونمسحه حتى لا يتم التحميل مرتين
+  cancelAndErase(item.id);
+
+  // إرسال الرابط والمعلومات لمحرك التنزيل في البرنامج
+  const filename = rawFilename || cleanUrl.split('/').pop() || undefined;
+  const sent = await sendToApp({
+    url,
+    filename,
+    referrer: item.referrer || undefined,
+    size: item.totalBytes > 0 ? item.totalBytes : undefined
+  });
+
+  if (!sent) {
+    // في حالة استثنائية إذا تعذر تسليم الرابط للبرنامج، نعيد التنزيل في المتصفح
+    restoreBrowserDownload(url, filename);
+  }
+});
 
 /* ===== (2) رصد وسائط البث HLS/DASH والفيديو (Sniffer) ===== */
 const STREAM_URL_RE = /\.m3u8($|[?#])|\.mpd($|[?#])/i;
@@ -214,50 +295,7 @@ chrome.tabs.onUpdated.addListener((tabId, info) => {
 });
 chrome.tabs.onRemoved.addListener(tabId => streamHits.delete(tabId));
 
-/* ===== (3) احتياط: إلغاء التنزيل إذا بدأ فعلياً مع حارس بدء التشغيل ===== */
-chrome.downloads.onCreated.addListener(item => {
-  if (!item || !item.url) return;
-  if (!settings.enabled) return;
-
-  // حل مشكلة التحميلات التلقائية عند فتح المتصفح (Startup Guard)
-  if (settings.startupGuard) {
-    const elapsed = Date.now() - EXT_BOOT_TIME;
-    if (elapsed < 8000) {
-      // إذا كان التنزيل مسجلاً في المتصفح قبل بدء الإضافة
-      if (item.startTime && new Date(item.startTime).getTime() < EXT_BOOT_TIME) {
-        return;
-      }
-      // تجاهل التنزيلات غير النشطة أو المستعادة من سجل الجلسة السابقة
-      if (item.state && item.state !== 'in_progress') {
-        return;
-      }
-    }
-  }
-
-  if (/^(blob:|data:|about:|chrome:|edge:)/i.test(item.url)) return;
-  const url = item.finalUrl || item.url;
-  if (!/^https?:\/\//i.test(url)) return;
-  if (isIgnored(url)) return;
-  if (isHandling(url)) return;
-  if (item.totalBytes > 0 && item.totalBytes < (settings.minSizeMB || 0) * 1024 * 1024) return;
-
-  const filename = (item.filename || '').split(/[\\/]/).pop() || undefined;
-  markHandling(url);
-
-  try { chrome.downloads.pause(item.id, () => {}); } catch (_e) {}
-  try { chrome.downloads.cancel(item.id, () => {}); } catch (_e) {}
-
-  sendToApp({
-    url,
-    filename,
-    referrer: item.referrer || undefined,
-    size: item.totalBytes > 0 ? item.totalBytes : undefined
-  }).then(ok => {
-    if (!ok) restoreBrowserDownload(url, filename);
-  }).catch(() => restoreBrowserDownload(url, filename));
-});
-
-/* ===== (4) قنوات الرسائل والتواصل مع الـ Popup وسكربت المحتوى Content Script ===== */
+/* ===== (3) قنوات الرسائل والتواصل مع الـ Popup وسكربت المحتوى Content Script ===== */
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || typeof msg !== 'object') return;
 
@@ -286,6 +324,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'getAppStatus') {
     httpSend('/summary', null, 'GET').then(summary => {
       if (summary && (summary.ok || summary.running || summary.connected)) {
+        appConnected = true;
+        lastAppCheck = Date.now();
         sendResponse({
           connected: true,
           speed: summary.totalSpeed || summary.speed || 0,
@@ -293,20 +333,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           total: summary.totalTasks || 0
         });
       } else {
-        // فحص المسار الاحتياطي /ping
         httpSend('/ping', null, 'GET').then(p => {
-          if (p && p.ok) {
-            sendResponse({ connected: true, speed: 0, active: 0, total: 0 });
-          } else {
-            sendResponse({ connected: false });
-          }
-        }).catch(() => sendResponse({ connected: false }));
+          const isAlive = !!(p && p.ok);
+          appConnected = isAlive;
+          lastAppCheck = Date.now();
+          sendResponse({ connected: isAlive, speed: 0, active: 0, total: 0 });
+        }).catch(() => {
+          appConnected = false;
+          lastAppCheck = Date.now();
+          sendResponse({ connected: false });
+        });
       }
     }).catch(() => {
       httpSend('/ping', null, 'GET').then(p => {
-        if (p && p.ok) sendResponse({ connected: true, speed: 0, active: 0, total: 0 });
-        else sendResponse({ connected: false });
-      }).catch(() => sendResponse({ connected: false }));
+        const isAlive = !!(p && p.ok);
+        appConnected = isAlive;
+        lastAppCheck = Date.now();
+        sendResponse({ connected: isAlive, speed: 0, active: 0, total: 0 });
+      }).catch(() => {
+        appConnected = false;
+        lastAppCheck = Date.now();
+        sendResponse({ connected: false });
+      });
     });
     return true; // استجابة غير متزامنة
   }

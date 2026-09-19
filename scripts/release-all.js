@@ -211,22 +211,24 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
 }
 
 function generateChangelog(version) {
-  return `## ⚡ Premium Download Manager v${version} - Comprehensive Fix & Stability Release
+  return `## ⚡ Premium Download Manager v${version} - Smart Browser Interception & Stability Release
 
 ### 🌟 الإصلاحات والتحسينات الرئيسية / Key Fixes & Improvements:
+- **منع التنزيل المزدوج نهائياً (Eliminate Double Downloads)**:
+  - إصلاح مشكلة تحميل الملف في المتصفح والبرنامج في نفس الوقت؛ يتم الآن إلغاء ومسح التنزيل فوراً من المتصفح لضمان التحميل من البرنامج فقط دون أي تكرار.
+- **الاعتراض الذكي المشروط بحالة تشغيل البرنامج (Smart Conditional Interception)**:
+  - يتم اعتراض التنزيلات فقط إذا كان البرنامج مفتوحاً ويعمل حالياً.
+  - في حال كان البرنامج مغلقاً، يقوم المتصفح بتحميل الملفات بشكل طبيعي وتلقائي دون أي تعطيل أو تدخل.
 - **إصلاح جذري لمحرك التنزيل (Critical Download Engine Fixes)**:
   - تحديث الترويسة (User-Agent) لمحاكاة متصفح Chrome الحديث، لتجاوز حظر Cloudflare وAkamai وCDNs وخطأ 403 Forbidden.
   - إزالة إعادة الفحص المزدوجة التي كانت تتسبب في انتهاء صلاحية الروابط المؤقتة وذات الرموز المميزة (Tokenized / Expired One-Time Links).
   - تصحيح حساب النطاقات المجزأة (Byte-Ranges) ومنع التداخل أو قراءة أجزاء منتهية (Zombie chunks).
   - إضافة إلغاء فوري ومحكم لتيار البيانات (Stream cancellation) لتحرير الاتصالات ومنع التعليق.
-  - تسجيل دقيق لحجم الملف النهائي للتنزيلات ذات الحجم المتدفق (Chunked / Unknown Content-Length).
 - **إصلاح جسر إضافة المتصفح (Browser Extension Native Messaging Bridge)**:
   - إصلاح مشكلة قراءة الإطارات عبر stdin في وضع الـ Native Messaging لضمان التقاط الروابط بنسبة 100% ودون انقطاع من Chrome وEdge.
 - **تحديث روابط الأدوات المساعدة (FFmpeg & Video Tools)**:
   - تحديث وتصحيح روابط تحميل حزم FFmpeg الثابتة لتفادي أخطاء 404 عند معالجة الفيديوهات.
   - إضافة User-Agent قياسي لتحميل yt-dlp ومكونات الفيديو تلقائياً.
-- **استقرار التخزين وقاعدة البيانات (Storage Resilience)**:
-  - دعم التخزين الاحتياطي التلقائي (JSON Mode) بكل سلاسة وسرعة مع اجتياز كافة اختبارات الجودة بنسبة 100%.
 
 ---
 ### 📦 Installation & Automatic Updates:
