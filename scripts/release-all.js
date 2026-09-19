@@ -163,13 +163,17 @@ function uploadAssetWithProgress(uploadBase, filePath, fileName) {
       res.on('end', () => {
         const text = Buffer.concat(chunks).toString('utf8');
         if (res.statusCode >= 400) {
+          if (text.includes('already_exists')) return resolve({ alreadyExists: true });
           let msg = text;
           try { msg = JSON.parse(text).message || text; } catch (_) {}
-          if (msg.includes('already_exists')) return resolve({ alreadyExists: true });
           return reject(new Error(`Upload HTTP ${res.statusCode}: ${msg}`));
         }
         process.stdout.write('\n');
-        resolve(JSON.parse(text));
+        try {
+          resolve(JSON.parse(text));
+        } catch (_) {
+          resolve({ ok: true });
+        }
       });
     });
 
@@ -385,15 +389,32 @@ ${C.bold}Usage:${C.reset}
     const mb = (fs.statSync(full).size / 1048576).toFixed(1);
     console.log(`\n  ${C.bold}Package: ${f}${C.reset} ${C.gray}(${mb} MB)${C.reset}`);
 
+    // If an asset with the same name exists, delete it first to ensure fresh overwrite
+    try {
+      const relInfo = await api('GET', `/repos/${REPO}/releases/${release.id}`);
+      const existing = (relInfo.assets || []).find(a => a.name === f);
+      if (existing) {
+        logInfo(`Asset ${f} already exists on release; removing old version to overwrite...`);
+        await api('DELETE', `/repos/${REPO}/releases/assets/${existing.id}`);
+        logOk(`Old asset ${f} deleted from release.`);
+      }
+    } catch (_delErr) {
+      // Continue even if delete fails
+    }
+
     let uploaded = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        await uploadAssetWithProgress(uploadBase, full, f);
-        logOk(`Uploaded ${C.bold}${f}${C.reset} successfully`);
+        const ures = await uploadAssetWithProgress(uploadBase, full, f);
+        if (ures && ures.alreadyExists) {
+          logInfo(`${f} already exists on release, skipping.`);
+        } else {
+          logOk(`Uploaded ${C.bold}${f}${C.reset} successfully`);
+        }
         uploaded = true;
         break;
       } catch (err) {
-        if (err.message && err.message.includes('already_exists')) {
+        if (err.message && (err.message.includes('already_exists') || err.message.includes('Validation Failed'))) {
           logInfo(`${f} already exists on release, skipping.`);
           uploaded = true;
           break;
